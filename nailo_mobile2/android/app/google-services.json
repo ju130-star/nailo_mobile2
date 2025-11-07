@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "769887719301",
+    "project_id": "nailo-mobile2",
+    "storage_bucket": "nailo-mobile2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:769887719301:android:c48c1859a47f172aad7eec",
+        "android_client_info": {
+          "package_name": "com.example.nailo_mobile2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsqukZkYWHMs1Ja2LcfeszHAkDjpCbfj4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
