@@ -11,7 +11,6 @@ class Usuario {
   final String tipo;         // "cliente" ou "proprietaria"
   final String? fotoUrl;     // URL da foto de perfil (opcional)
   final bool ativo;          // Usuário ativo ou não
-  final DateTime dataCadastro; // Data de criação no sistema
 
   //construtor
   Usuario({
@@ -22,7 +21,6 @@ class Usuario {
     required this.tipo,
     this.fotoUrl,
     this.ativo = true,
-    required this.dataCadastro,
   });
 
   //método para converter OBJ => JSON (toMap)
@@ -35,7 +33,6 @@ class Usuario {
       "tipo": tipo,
       "fotoUrl": fotoUrl,
       "ativo": ativo,
-      "dataCadastro": dataCadastro.toIso8601String(),
     };
   }
 
@@ -49,7 +46,6 @@ class Usuario {
       tipo: map["tipo"] ?? '',
       fotoUrl: map["fotoUrl"],
       ativo: map["ativo"] ?? true,
-      dataCadastro: DateTime.tryParse(map["dataCadastro"] ?? '') ?? DateTime.now(),
     );
   }
 }

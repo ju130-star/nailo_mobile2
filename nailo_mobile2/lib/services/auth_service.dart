@@ -10,7 +10,7 @@ import 'usuario_service.dart';
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // ---------- CADASTRAR NOVO USUÁRIO ----------
+  // -Cadastrar novo Usuário
   static Future<User?> cadastrarUsuario({
     required String email,
     required String senha,
@@ -19,7 +19,7 @@ class AuthService {
     required String tipo, // cliente ou proprietaria
   }) async {
     try {
-      // 1️⃣ Cria o usuário no Authentication (Firebase cuida do email e senha)
+      // 1️Cria o usuário no Authentication (Firebase cuida do email e senha)
       UserCredential cred = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: senha,
@@ -28,17 +28,16 @@ class AuthService {
       User? user = cred.user;
       if (user == null) return null;
 
-      // 2️⃣ Cria o objeto Usuario com os dados complementares
+      // 2Cria o objeto Usuario com os dados complementares
       Usuario novoUsuario = Usuario(
         id: user.uid, // UID gerado automaticamente pelo Firebase Auth
         nome: nome,
         email: email,
         telefone: telefone,
         tipo: tipo,
-        dataCadastro: DateTime.now(),
       );
 
-      // 3️⃣ Salva os dados do usuário no Firestore (chama o UsuarioService)
+      // Salva os dados do usuário no Firestore (chama o UsuarioService)
       await UsuarioService.adicionarUsuario(novoUsuario);
 
       print("Usuário cadastrado e salvo com sucesso!");
@@ -49,7 +48,7 @@ class AuthService {
     }
   }
 
-  // ---------- LOGIN ----------
+  // Login
   static Future<User?> loginUsuario(String email, String senha) async {
     try {
       UserCredential cred = await _auth.signInWithEmailAndPassword(
@@ -64,7 +63,7 @@ class AuthService {
     }
   }
 
-  // ---------- LOGOUT ----------
+  // Logout 
   static Future<void> logoutUsuario() async {
     try {
       await _auth.signOut();
@@ -74,12 +73,12 @@ class AuthService {
     }
   }
 
-  // ---------- PEGAR USUÁRIO ATUAL ----------
+  // Pegar Usuário Atual
   static User? get usuarioAtual {
     return _auth.currentUser;
   }
 
-  // ---------- ESCUTAR ESTADO DE LOGIN EM TEMPO REAL ----------
+  // Escutar Estado de Login em Tempo Real
   static Stream<User?> streamAuthState() {
     return _auth.authStateChanges();
   }
