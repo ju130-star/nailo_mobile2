@@ -1,7 +1,3 @@
-// classe de modelagem do OBJ Agendamento
-// receber os dados do Firebase -> enviar os dados para o Firestore
-// conecta cliente, proprietária e serviço
-
 class Agendamento {
   //atributos
   final String id;              // ID do agendamento
@@ -13,6 +9,7 @@ class Agendamento {
   final String? observacao;     // Observações opcionais
   final DateTime criadoEm;      // Data de criação
   final DateTime atualizadoEm;  // Última modificação
+  final double preco;           // Valor do serviço
 
   //construtor
   Agendamento({
@@ -25,6 +22,7 @@ class Agendamento {
     this.observacao,
     required this.criadoEm,
     required this.atualizadoEm,
+    required this.preco,
   });
 
   //método para converter OBJ => JSON (toMap)
@@ -39,6 +37,7 @@ class Agendamento {
       "observacao": observacao,
       "criadoEm": criadoEm.toIso8601String(),
       "atualizadoEm": atualizadoEm.toIso8601String(),
+      "preco": preco,
     };
   }
 
@@ -54,6 +53,7 @@ class Agendamento {
       observacao: map["observacao"],
       criadoEm: DateTime.tryParse(map["criadoEm"] ?? '') ?? DateTime.now(),
       atualizadoEm: DateTime.tryParse(map["atualizadoEm"] ?? '') ?? DateTime.now(),
+      preco: (map["preco"] ?? 0).toDouble(),
     );
   }
 }
