@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:nailo_mobile2/models/agendamento.dart';
 import 'package:nailo_mobile2/services/agendamento_service.dart';
 
 class HistoricoClienteView extends StatefulWidget {
-  const HistoricoClienteView({super.key});
+  final String userId; // <- recebe o UID da NavbarCliente
+
+  const HistoricoClienteView({super.key, required this.userId});
 
   @override
   State<HistoricoClienteView> createState() => _HistoricoClienteViewState();
 }
 
 class _HistoricoClienteViewState extends State<HistoricoClienteView> {
-  final _auth = FirebaseAuth.instance;
   List<Agendamento> _historico = [];
   bool _carregando = true;
 
@@ -23,11 +23,8 @@ class _HistoricoClienteViewState extends State<HistoricoClienteView> {
   }
 
   Future<void> _carregarHistorico() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
     try {
-      final agendamentos = await AgendamentoService.listarAgendamentos(user.uid);
+      final agendamentos = await AgendamentoService.listarAgendamentos(widget.userId);
 
       // filtra somente os que já passaram ou estão concluídos/cancelados
       final historico = agendamentos.where((ag) {
@@ -90,12 +87,8 @@ class _HistoricoClienteViewState extends State<HistoricoClienteView> {
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: ListTile(
         leading: Icon(
-          ag.status == "cancelado"
-              ? Icons.cancel
-              : Icons.check_circle,
-          color: ag.status == "cancelado"
-              ? Colors.redAccent
-              : const Color(0xFF48CFCB),
+          ag.status == "cancelado" ? Icons.cancel : Icons.check_circle,
+          color: ag.status == "cancelado" ? Colors.redAccent : const Color(0xFF48CFCB),
           size: 30,
         ),
         title: Text(

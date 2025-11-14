@@ -82,4 +82,10 @@ class AuthService {
   static Stream<User?> streamAuthState() {
     return _auth.authStateChanges();
   }
+
+  // Buscar o tipo do usuário no Firestore
+  static Future<String?> getTipoUsuario(String uid) async {
+  final usuario = await UsuarioService.buscarUsuarioPorId(uid);
+  return usuario?.tipo;  
+  }
 }

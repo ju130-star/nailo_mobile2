@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nailo_mobile2/models/servico.dart';
 import '../../services/proprietaria_service.dart';
 
+// ignore: prefer_const_constructors_in_immutables
 class PerfilProprietariaView extends StatelessWidget {
   final ProprietariaService service;
   final List<Servico> servicos;
@@ -34,7 +35,10 @@ class PerfilProprietariaView extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(s.nome, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  s.nome,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 TextField(
                   decoration: const InputDecoration(labelText: "Nome"),
                   controller: TextEditingController(text: nomeMap[s.id]),

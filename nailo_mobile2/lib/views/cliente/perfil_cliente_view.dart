@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:nailo_mobile2/services/auth_service.dart';
 import 'package:nailo_mobile2/services/usuario_service.dart';
 import 'package:nailo_mobile2/models/user.dart';
 
 class PerfilClienteView extends StatefulWidget {
-  const PerfilClienteView({super.key});
+  final String userId;
+
+  const PerfilClienteView({super.key, required this.userId});
 
   @override
   State<PerfilClienteView> createState() => _PerfilClienteViewState();
 }
 
 class _PerfilClienteViewState extends State<PerfilClienteView> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   Usuario? _usuario;
   bool _carregando = true;
 
@@ -22,11 +23,8 @@ class _PerfilClienteViewState extends State<PerfilClienteView> {
   }
 
   Future<void> _carregarUsuario() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
     try {
-      final usuario = await UsuarioService.buscarUsuarioPorId(user.uid);
+      final usuario = await UsuarioService.buscarUsuarioPorId(widget.userId);
       setState(() {
         _usuario = usuario;
         _carregando = false;
@@ -38,7 +36,7 @@ class _PerfilClienteViewState extends State<PerfilClienteView> {
   }
 
   Future<void> _logout() async {
-    await _auth.signOut();
+    await AuthService.logoutUsuario(); // <-- chama o logout do AuthService
     Navigator.pushReplacementNamed(context, '/login');
   }
 
@@ -72,7 +70,6 @@ class _PerfilClienteViewState extends State<PerfilClienteView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Foto de perfil
           CircleAvatar(
             radius: 60,
             backgroundColor: const Color(0xFF48CFCB),
@@ -83,8 +80,6 @@ class _PerfilClienteViewState extends State<PerfilClienteView> {
                 : null,
           ),
           const SizedBox(height: 16),
-
-          // Nome
           Text(
             _usuario!.nome,
             style: const TextStyle(
@@ -94,8 +89,6 @@ class _PerfilClienteViewState extends State<PerfilClienteView> {
             ),
           ),
           const SizedBox(height: 4),
-
-          // Email
           Text(
             _usuario!.email,
             style: const TextStyle(
@@ -104,21 +97,13 @@ class _PerfilClienteViewState extends State<PerfilClienteView> {
             ),
           ),
           const SizedBox(height: 20),
-
-          // Telefone
           _infoTile(Icons.phone, _usuario!.telefone),
           const SizedBox(height: 10),
-
-          // Tipo de usuário
           _infoTile(Icons.badge, "Tipo: ${_usuario!.tipo}"),
           const SizedBox(height: 10),
-
-          // Status
           _infoTile(Icons.verified_user,
               _usuario!.ativo ? "Ativo ✅" : "Inativo ❌"),
           const SizedBox(height: 30),
-
-          // Botões
           ElevatedButton.icon(
             onPressed: _logout,
             style: ElevatedButton.styleFrom(
@@ -126,8 +111,7 @@ class _PerfilClienteViewState extends State<PerfilClienteView> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              padding:
-                  const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
             ),
             icon: const Icon(Icons.logout, color: Colors.white),
             label: const Text(

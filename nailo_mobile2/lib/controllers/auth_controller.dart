@@ -3,43 +3,69 @@ import 'package:nailo_mobile2/models/user.dart';
 import '../services/usuario_service.dart';
 
 class AuthController {
-  final _auth = FirebaseAuth.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   User? get currentUser => _auth.currentUser;
 
   // Registrar usuário
-  Future<void> registrar(String email, String senha, String nome, String telefone, String tipo) async {
+  Future<Usuario?> registrar(
+    String email,
+    String senha,
+    String nome,
+    String telefone,
+    String tipo,
+  ) async {
     try {
+      // Criação no FirebaseAuth
       UserCredential cred = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: senha,
       );
 
-      // Criar o objeto Usuario já com o id do Auth
+      final uid = cred.user!.uid;
+
       final usuario = Usuario(
-        id: cred.user!.uid,
+        id: uid,
         nome: nome,
         email: email,
         telefone: telefone,
-        tipo: tipo
-        // adiciona outros campos se houver
+        tipo: tipo, // cliente ou proprietaria
       );
 
-      // Salvar no Firestore
+      // Salva no Firestore
       await UsuarioService.adicionarUsuario(usuario);
 
       print("Usuário registrado com sucesso!");
+      return usuario;
+
     } catch (e) {
       print("Erro ao registrar: $e");
       rethrow;
     }
   }
 
-  // Login
-  Future<void> login(String email, String senha) async {
+  // Login + retorna tipo do usuário
+  Future<String?> login(String email, String senha) async {
     try {
-      await _auth.signInWithEmailAndPassword(email: email, password: senha);
+      UserCredential cred = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: senha,
+      );
+
       print("Login realizado com sucesso!");
+
+      // Buscar dados no Firestore
+      final usuario =
+          await UsuarioService.buscarUsuarioPorId(cred.user!.uid);
+
+      if (usuario == null) {
+        print("ERRO: Usuário existe no Auth mas não no Firestore!");
+        return null;
+      }
+
+      // Retorna "cliente" ou "proprietaria"
+      return usuario.tipo;
+
     } catch (e) {
       print("Erro ao fazer login: $e");
       rethrow;

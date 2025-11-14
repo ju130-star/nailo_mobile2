@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:nailo_mobile2/models/agendamento.dart';
 import 'package:nailo_mobile2/services/agendamento_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class AgendaClienteView extends StatefulWidget {
-  const AgendaClienteView({super.key});
+  final String userId; // <- recebe o UID da NavbarCliente
+
+  const AgendaClienteView({super.key, required this.userId});
 
   @override
   State<AgendaClienteView> createState() => _AgendaClienteViewState();
 }
 
 class _AgendaClienteViewState extends State<AgendaClienteView> {
-  final _auth = FirebaseAuth.instance;
   List<Agendamento> _agendamentos = [];
   bool _carregando = true;
 
@@ -22,12 +22,8 @@ class _AgendaClienteViewState extends State<AgendaClienteView> {
   }
 
   Future<void> _carregarAgendamentos() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
     try {
-      // usa o método existente no seu service
-      final agendamentos = await AgendamentoService.listarAgendamentos(user.uid);
+      final agendamentos = await AgendamentoService.listarAgendamentos(widget.userId);
 
       setState(() {
         _agendamentos = agendamentos;

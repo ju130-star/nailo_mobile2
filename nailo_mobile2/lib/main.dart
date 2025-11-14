@@ -1,21 +1,18 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:nailo_mobile2/firebase_options.dart';
 import 'package:nailo_mobile2/views/auth/login_view.dart';
-import 'package:nailo_mobile2/views/cliente/home_cliente_view.dart';
 import 'package:nailo_mobile2/views/components/navbar_cliente.dart';
+import 'package:nailo_mobile2/views/components/navbar_proprietaria.dart';
 
 void main() async {
-  // Garante o carregamento dos widgets antes do Firebase
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Inicializa o Firebase com as opções automáticas
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Executa o app
   runApp(const NailoApp());
 }
 
@@ -40,26 +37,52 @@ class NailoApp extends StatelessWidget {
   }
 }
 
-class AuthStream extends StatefulWidget {
+class AuthStream extends StatelessWidget {
   const AuthStream({super.key});
 
-  @override
-  State<AuthStream> createState() => _AuthStreamState();
-}
+  Future<Widget> _carregarHome(User user) async {
+    final snap = await FirebaseFirestore.instance
+        .collection("usuarios")
+        .doc(user.uid)
+        .get();
 
-class _AuthStreamState extends State<AuthStream> {
+    final tipo = snap.data()?["tipo"];
+
+    if (tipo == "proprietaria") {
+      return const NavbarProprietaria(); // pode passar userId se necessário
+    } else {
+      return NavbarCliente(userId: user.uid); // ← corrigido
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // StreamBuilder -> muda automaticamente entre login e home
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // Se o usuário estiver logado → vai pra HomeClienteView
-        if (snapshot.hasData) {
-          return const NavbarCliente();
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
-        // Caso contrário → vai pra LoginView
-        return const LoginView();
+
+        if (!snapshot.hasData) {
+          return const LoginView();
+        }
+
+        final user = snapshot.data!;
+
+        return FutureBuilder<Widget>(
+          future: _carregarHome(user),
+          builder: (context, snap) {
+            if (!snap.hasData) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            return snap.data!;
+          },
+        );
       },
     );
   }

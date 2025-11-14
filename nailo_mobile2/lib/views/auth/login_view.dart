@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:nailo_mobile2/views/auth/cadastro_view.dart';
@@ -18,15 +19,43 @@ class _LoginViewState extends State<LoginView> {
 
   //método para fazer login
   void _signIn() async {
-    try {
-      await _auth.signInWithEmailAndPassword(
-        email: _emailField.text.trim(),
-        password: _senhaField.text,
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Falha ao fazer login: $e")));
+  try {
+    // 1) Login
+    UserCredential cred = await _auth.signInWithEmailAndPassword(
+      email: _emailField.text.trim(),
+      password: _senhaField.text,
+    );
+
+    final user = cred.user;
+    if (user == null) return;
+
+    // 2) Buscar usuário no Firestore
+    final snap = await FirebaseFirestore.instance
+        .collection("usuarios")
+        .doc(user.uid)
+        .get();
+
+    final data = snap.data();
+    if (data == null) {
+      throw Exception("Usuário sem dados no Firestore!");
     }
+
+    final tipo = data["tipo"]; // cliente ou proprietaria
+
+    // 3) Redirecionar conforme tipo
+    if (tipo == "proprietaria") {
+      Navigator.pushReplacementNamed(context, "/homeProprietaria");
+    } else {
+      Navigator.pushReplacementNamed(context, "/homeCliente");
+    }
+
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Falha ao fazer login: $e")),
+    );
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +75,7 @@ class _LoginViewState extends State<LoginView> {
               TextField(
                 controller: _senhaField,
                 decoration: InputDecoration(labelText: "Senha",
-                suffix: IconButton(
+                suffixIcon: IconButton(
                   onPressed: ()=> setState(() {
                     _ocultarSenha = !_ocultarSenha;
                   }),
