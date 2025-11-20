@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nailo_mobile2/models/horario_trabalho.dart';
 import 'package:nailo_mobile2/services/proprietaria_service.dart';
+import 'package:nailo_mobile2/views/proprietaria/alterar_horarios_view.dart';
 
 class HomeProprietariaView extends StatelessWidget {
   final ProprietariaService service;
@@ -77,7 +78,15 @@ class HomeProprietariaView extends StatelessWidget {
                 Center(
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, "/alterarHorarios");
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AlterarHorariosView(
+                            service: service,
+                            semana: horarios,
+                          ),
+                        ),
+                      );
                     },
                     child: const Text("Alterar Horários"),
                   ),

@@ -73,7 +73,6 @@ class _NavbarProprietariaState extends State<NavbarProprietaria> {
               return const Center(child: CircularProgressIndicator());
             }
             return PerfilProprietariaView(
-              service: _service,
               servicos: snapshot.data!,
             );
           },

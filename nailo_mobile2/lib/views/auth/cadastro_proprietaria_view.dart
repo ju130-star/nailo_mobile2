@@ -51,7 +51,7 @@ class _CadastroProprietariaViewState
                     email: _email.text.trim(),
                     telefone: _telefone.text.trim(),
                     senha: _senha.text.trim(),
-                    tipo: "proprietaria",  // <-- IMPORTANTE !!!
+                    tipo: "proprietaria",
                   );
 
                   if (mounted) {
@@ -62,7 +62,13 @@ class _CadastroProprietariaViewState
                     );
                   }
 
-                  Navigator.pop(context);
+                  // Limpar campos
+                  _nome.clear();
+                  _email.clear();
+                  _telefone.clear();
+                  _senha.clear();
+
+                  Navigator.pop(context); // volta para o login
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text("Erro ao cadastrar: $e")),
