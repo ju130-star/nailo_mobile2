@@ -19,6 +19,13 @@ class _NavbarProprietariaState extends State<NavbarProprietaria> {
   final ProprietariaService _service = ProprietariaService();
 
   @override
+  void initState() {
+    super.initState();
+    // 🔥 Inicializa os horários padrões caso o banco esteja vazio
+    _service.inicializarHorariosPadroes();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: _getPagina(_paginaAtual),
@@ -59,13 +66,12 @@ class _NavbarProprietariaState extends State<NavbarProprietaria> {
   Widget _getPagina(int index) {
     switch (index) {
       case 0:
-        return HomeProprietariaView(service: _service);
+        return HomeProprietariaView(); // CORRIGIDO
       case 1:
         return AgendaProprietariaView(service: _service);
       case 2:
         return ControleFinanceiroView(service: _service);
       case 3:
-        // Aqui o Perfil PRECISA carregar os serviços antes de abrir a tela
         return FutureBuilder(
           future: _service.listarServicos(),
           builder: (context, snapshot) {

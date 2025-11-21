@@ -21,6 +21,7 @@ class _AgendaProprietariaViewState extends State<AgendaProprietariaView> {
   void initState() {
     super.initState();
     _loadAgendamentos();
+    _selectedDay = _focusedDay; // Seleciona o dia atual por padrão
   }
 
   Future<void> _loadAgendamentos() async {
@@ -41,6 +42,8 @@ class _AgendaProprietariaViewState extends State<AgendaProprietariaView> {
 
   @override
   Widget build(BuildContext context) {
+    final agendamentosDoDia = _selectedDay != null ? _getAgendamentosDoDia(_selectedDay!) : [];
+
     return Scaffold(
       appBar: AppBar(title: const Text("Agenda da Proprietária")),
       body: Column(
@@ -71,39 +74,82 @@ class _AgendaProprietariaViewState extends State<AgendaProprietariaView> {
           const Divider(),
 
           // --- Calendário com lembretes ---
-          Expanded(
-            child: TableCalendar(
-              firstDay: DateTime.utc(2020, 1, 1),
-              lastDay: DateTime.utc(2030, 12, 31),
-              focusedDay: _focusedDay,
-              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-              onDaySelected: (selectedDay, focusedDay) {
-                setState(() {
-                  _selectedDay = selectedDay;
-                  _focusedDay = focusedDay;
-                });
+          TableCalendar(
+            firstDay: DateTime.utc(2020, 1, 1),
+            lastDay: DateTime.utc(2030, 12, 31),
+            focusedDay: _focusedDay,
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                _selectedDay = selectedDay;
+                _focusedDay = focusedDay;
+              });
+            },
+            calendarBuilders: CalendarBuilders(
+              markerBuilder: (context, day, events) {
+                final diaAgendamentos = _getAgendamentosDoDia(day);
+                if (diaAgendamentos.isNotEmpty) {
+                  return ListView(
+                    shrinkWrap: true,
+                    children: diaAgendamentos.map((a) => Container(
+                      margin: const EdgeInsets.symmetric(vertical: 1),
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.blue,
+                      ),
+                    )).toList(),
+                  );
+                }
+                return null;
               },
-              calendarBuilders: CalendarBuilders(
-                markerBuilder: (context, day, events) {
-                  final diaAgendamentos = _getAgendamentosDoDia(day);
-                  if (diaAgendamentos.isNotEmpty) {
-                    return ListView(
-                      shrinkWrap: true,
-                      children: diaAgendamentos.map((a) => Container(
-                        margin: const EdgeInsets.symmetric(vertical: 1),
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.blue,
-                        ),
-                      )).toList(),
-                    );
-                  }
-                  return null;
-                },
-              ),
             ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // --- Cards de atendimentos do dia selecionado ---
+          Expanded(
+            child: agendamentosDoDia.isEmpty
+                ? const Center(child: Text("Nenhum atendimento para este dia"))
+                : ListView.builder(
+                    itemCount: agendamentosDoDia.length,
+                    itemBuilder: (context, index) {
+                      final agendamento = agendamentosDoDia[index];
+                      final hora = "${agendamento.data.hour.toString().padLeft(2, '0')}:${agendamento.data.minute.toString().padLeft(2, '0')}";
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 25,
+                                child: Text(agendamento.idCliente.substring(0, 2).toUpperCase()),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      agendamento.idServico,
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(agendamento.idCliente),
+                                  ],
+                                ),
+                              ),
+                              Text(hora),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

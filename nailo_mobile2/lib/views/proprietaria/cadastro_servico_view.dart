@@ -40,7 +40,7 @@ class _CadastroServicoViewState extends State<CadastroServicoView> {
         const SnackBar(content: Text("Serviço cadastrado com sucesso!")),
       );
 
-      Navigator.pop(context);
+      Navigator.pop(context, servico);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Erro ao cadastrar serviço: $e")),
