@@ -63,26 +63,16 @@ class _NavbarProprietariaState extends State<NavbarProprietaria> {
   }
 
   // Páginas separadas, cada uma recebendo o mesmo service
-  Widget _getPagina(int index) {
+    Widget _getPagina(int index) {
     switch (index) {
       case 0:
-        return HomeProprietariaView(); // CORRIGIDO
+        return HomeProprietariaView();
       case 1:
         return AgendaProprietariaView(service: _service);
       case 2:
         return ControleFinanceiroView(service: _service);
       case 3:
-        return FutureBuilder(
-          future: _service.listarServicos(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            return PerfilProprietariaView(
-              servicos: snapshot.data!,
-            );
-          },
-        );
+        return const PerfilProprietariaView(); // <- só instanciar direto
       default:
         return const SizedBox();
     }
