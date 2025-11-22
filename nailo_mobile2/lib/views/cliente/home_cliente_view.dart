@@ -12,7 +12,10 @@ class HomeClienteView extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFA7E8E4),
       appBar: AppBar(
-        title: const Text("Nailo 💅", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          "Nailo 💅",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         backgroundColor: const Color(0xFF48CFCB),
       ),
@@ -36,13 +39,13 @@ class HomeClienteView extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Lista dinâmica com os dois profissionais ativos
+            // Lista dinâmica de profissionais (proprietárias)
             Expanded(
               child: FutureBuilder<QuerySnapshot>(
                 future: FirebaseFirestore.instance
-                    .collection('profissionais')
+                    .collection('usuarios')
+                    .where('tipo', isEqualTo: 'proprietaria')
                     .where('ativo', isEqualTo: true)
-                    .limit(2)
                     .get(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
@@ -51,17 +54,19 @@ class HomeClienteView extends StatelessWidget {
 
                   final docs = snapshot.data!.docs;
                   if (docs.isEmpty) {
-                    return const Center(child: Text("Nenhuma profissional cadastrada"));
+                    return const Center(
+                      child: Text("Nenhuma profissional cadastrada"),
+                    );
                   }
 
                   return ListView.builder(
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
                       final data = docs[index].data() as Map<String, dynamic>;
+
                       return _profissionalCard(
                         context,
                         nome: data['nome'] ?? 'Sem nome',
-                        especialidade: data['especialidade'] ?? '',
                         foto: data['fotoUrl'] ?? '',
                       );
                     },
@@ -72,12 +77,15 @@ class HomeClienteView extends StatelessWidget {
           ],
         ),
       ),
+
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF48CFCB),
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const FormAgendamentoView()),
+            MaterialPageRoute(
+              builder: (context) => const FormAgendamentoView(),
+            ),
           );
         },
         child: const Icon(Icons.add, color: Colors.white),
@@ -85,23 +93,46 @@ class HomeClienteView extends StatelessWidget {
     );
   }
 
-  Widget _profissionalCard(BuildContext context,
-      {required String nome, required String especialidade, required String foto}) {
-    return Card(
-      color: const Color(0xFFFAFAFA),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 4,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: ListTile(
-        leading: CircleAvatar(radius: 28, backgroundImage: NetworkImage(foto)),
-        title: Text(nome, style: const TextStyle(color: Color(0xFF107A73), fontWeight: FontWeight.bold)),
-        subtitle: Text(especialidade, style: const TextStyle(color: Colors.black54)),
-        trailing: const Icon(Icons.arrow_forward_ios, color: Color(0xFF48CFCB)),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Abrindo perfil de $nome...")),
-          );
-        },
+  Widget _profissionalCard(
+    BuildContext context, {
+    required String nome,
+    required String foto,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8), // AUMENTA A LARGURA
+      child: Card(
+        color: const Color(0xFFFAFAFA),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 4,
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16, // MAIS ESPAÇO ENTRE FOTO E TEXTO
+            vertical: 12,
+          ),
+          leading: CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.grey[300],
+            backgroundImage: foto.isNotEmpty ? NetworkImage(foto) : null,
+            child: foto.isEmpty ? const Icon(Icons.person, size: 30) : null,
+          ),
+          title: Text(
+            nome,
+            style: const TextStyle(
+              color: Color(0xFF107A73),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          trailing: const Icon(
+            Icons.arrow_forward_ios,
+            color: Color(0xFF48CFCB),
+          ),
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Abrindo perfil de $nome...")),
+            );
+          },
+        ),
       ),
     );
   }
