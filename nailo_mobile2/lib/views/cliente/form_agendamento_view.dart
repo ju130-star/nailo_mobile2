@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
 class FormAgendamentoView extends StatefulWidget {
-  const FormAgendamentoView({super.key});
+  final String proprietariaId; // <-- ADICIONADO
+
+  const FormAgendamentoView({
+    super.key,
+    required this.proprietariaId, // <-- ADICIONADO
+  });
 
   @override
   State<FormAgendamentoView> createState() => _FormAgendamentoViewState();
@@ -17,11 +22,11 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFA7E8E4), // Fundo verde água
+      backgroundColor: const Color(0xFFA7E8E4),
       appBar: AppBar(
         title: const Text("Novo Agendamento 💅"),
         centerTitle: true,
-        backgroundColor: const Color(0xFF48CFCB), // Verde Jade
+        backgroundColor: const Color(0xFF48CFCB),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -31,6 +36,18 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                
+                // 🔥 Mostra o ID da profissional (só p/ teste agora)
+                Text(
+                  "Agendando com profissional ID: ${widget.proprietariaId}",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black54,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
                 const Text(
                   "Preencha os dados do agendamento:",
                   style: TextStyle(
@@ -39,6 +56,7 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+
                 const SizedBox(height: 20),
 
                 // Campo Serviço
@@ -68,9 +86,9 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
                   validator: (value) =>
                       value == null || value.isEmpty ? "Informe o horário" : null,
                 ),
+
                 const SizedBox(height: 30),
 
-                // Botão salvar
                 Center(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
@@ -83,7 +101,6 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
                     ),
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
-                        // aqui depois você vai salvar no Firebase
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text("Agendamento salvo com sucesso!"),

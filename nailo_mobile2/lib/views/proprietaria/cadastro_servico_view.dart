@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:nailo_mobile2/models/servico.dart';
 import 'package:nailo_mobile2/services/servico_service.dart';
 
@@ -32,6 +33,10 @@ class _CadastroServicoViewState extends State<CadastroServicoView> {
         duracao: int.parse(_duracao.text),
       );
 
+      // 🔥 PEGA O ID DA PROPRIETÁRIA LOGADA
+      final proprietariaId = FirebaseAuth.instance.currentUser!.uid;
+
+      // 🔥 SALVA O SERVIÇO COM O ID DA PROPRIETÁRIA
       await ServicoService.adicionarServico(servico);
 
       if (!mounted) return;

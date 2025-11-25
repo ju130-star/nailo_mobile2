@@ -71,13 +71,16 @@ class _VisualizarPerfilProfissionalViewState
             // FOTO
             CircleAvatar(
               radius: 65,
-              backgroundImage: proprietaria!["fotoUrl"] != null
+              backgroundImage: (proprietaria!["fotoUrl"] != null &&
+                      proprietaria!["fotoUrl"].toString().isNotEmpty)
                   ? NetworkImage(proprietaria!["fotoUrl"])
                   : null,
-              child: proprietaria!["fotoUrl"] == null
+              child: (proprietaria!["fotoUrl"] == null ||
+                      proprietaria!["fotoUrl"].toString().isEmpty)
                   ? Icon(Icons.person, size: 70)
                   : null,
             ),
+
             SizedBox(height: 20),
 
             // NOME
@@ -90,7 +93,8 @@ class _VisualizarPerfilProfissionalViewState
 
             // TELEFONE
             Text(
-              proprietaria!["telefone"] ?? "Sem telefone cadastrado",
+              proprietaria!["telefone"]?.toString() ??
+                  "Sem telefone cadastrado",
               style: TextStyle(fontSize: 18, color: Colors.black87),
             ),
 
@@ -143,6 +147,10 @@ class _VisualizarPerfilProfissionalViewState
                   )
                 : Column(
                     children: servicos.map((s) {
+                      final preco = (s["preco"] is num)
+                          ? s["preco"]
+                          : num.tryParse(s["preco"].toString()) ?? 0;
+
                       return Card(
                         color: Color(0xFFFAFAFA),
                         margin: EdgeInsets.symmetric(vertical: 6),
@@ -156,7 +164,7 @@ class _VisualizarPerfilProfissionalViewState
                             style: TextStyle(fontSize: 18),
                           ),
                           trailing: Text(
-                            "R\$ ${s["preco"].toStringAsFixed(2)}",
+                            "R\$ ${preco.toStringAsFixed(2)}",
                             style: TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.bold),
                           ),

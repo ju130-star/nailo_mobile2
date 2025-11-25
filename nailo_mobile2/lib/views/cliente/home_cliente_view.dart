@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nailo_mobile2/views/cliente/form_agendamento_view.dart';
+import 'package:nailo_mobile2/views/cliente/visualizar_perfil_profissional.dart';
 
 class HomeClienteView extends StatelessWidget {
   final String userId; // UID do cliente logado
@@ -39,7 +40,6 @@ class HomeClienteView extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Lista dinâmica de profissionais (proprietárias)
             Expanded(
               child: FutureBuilder<QuerySnapshot>(
                 future: FirebaseFirestore.instance
@@ -63,11 +63,13 @@ class HomeClienteView extends StatelessWidget {
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
                       final data = docs[index].data() as Map<String, dynamic>;
+                      final id = docs[index].id;
 
                       return _profissionalCard(
                         context,
                         nome: data['nome'] ?? 'Sem nome',
                         foto: data['fotoUrl'] ?? '',
+                        proprietariaId: id,
                       );
                     },
                   );
@@ -77,29 +79,18 @@ class HomeClienteView extends StatelessWidget {
           ],
         ),
       ),
-
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF48CFCB),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const FormAgendamentoView(),
-            ),
-          );
-        },
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
     );
   }
 
+  // 🔥 Versão correta: só envia o ID (como a View pede)
   Widget _profissionalCard(
     BuildContext context, {
     required String nome,
     required String foto,
+    required String proprietariaId,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8), // AUMENTA A LARGURA
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Card(
         color: const Color(0xFFFAFAFA),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -107,7 +98,7 @@ class HomeClienteView extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 8),
         child: ListTile(
           contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16, // MAIS ESPAÇO ENTRE FOTO E TEXTO
+            horizontal: 16,
             vertical: 12,
           ),
           leading: CircleAvatar(
@@ -128,8 +119,13 @@ class HomeClienteView extends StatelessWidget {
             color: Color(0xFF48CFCB),
           ),
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Abrindo perfil de $nome...")),
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => VisualizarPerfilProfissionalView(
+                  proprietariaId: proprietariaId,
+                ),
+              ),
             );
           },
         ),
