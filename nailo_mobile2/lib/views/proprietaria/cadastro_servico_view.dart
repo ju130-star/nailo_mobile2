@@ -23,21 +23,23 @@ class _CadastroServicoViewState extends State<CadastroServicoView> {
     if (!_formKey.currentState!.validate()) return;
 
     try {
+      // 1. OBTÉM O ID DA PROPRIETÁRIA LOGADA (você já estava fazendo isso)
+      final proprietariaId = FirebaseAuth.instance.currentUser!.uid; 
+      
       final id = FirebaseFirestore.instance.collection("services").doc().id;
 
+      // 2. CORREÇÃO CRUCIAL: Adicionar o idProprietaria ao construtor Servico
       final servico = Servico(
         id: id,
         nome: _nome.text.trim(),
         descricao: _descricao.text.trim(),
         preco: double.parse(_preco.text),
         duracao: int.parse(_duracao.text),
+        idProprietaria: proprietariaId, // <-- AGORA O ID ESTÁ SENDO PASSADO
       );
 
-      // 🔥 PEGA O ID DA PROPRIETÁRIA LOGADA
-      final proprietariaId = FirebaseAuth.instance.currentUser!.uid;
-
-      // 🔥 SALVA O SERVIÇO COM O ID DA PROPRIETÁRIA
-      await ServicoService.adicionarServico(servico);
+      // 3. O ServicoService deve estar corrigido para usar servico.toMap()
+      await ServicoService.adicionarServico(servico); 
 
       if (!mounted) return;
 

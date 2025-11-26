@@ -39,8 +39,8 @@ class _VisualizarPerfilProfissionalViewState
 
     // Buscar serviços da proprietária
     final snap = await FirebaseFirestore.instance
-        .collection('servicos')
-        .where('proprietariaId', isEqualTo: widget.proprietariaId)
+        .collection('services') // <-- CORREÇÃO: Coleção 'services'
+        .where('idProprietaria', isEqualTo: widget.proprietariaId) // <-- CORREÇÃO: Filtro por 'idProprietaria'
         .get();
 
     servicos = snap.docs.map((d) => d.data() as Map<String, dynamic>).toList();
@@ -140,6 +140,7 @@ class _VisualizarPerfilProfissionalViewState
 
             SizedBox(height: 15),
 
+            // LISTA DE SERVIÇOS
             servicos.isEmpty
                 ? Text(
                     "Nenhum serviço cadastrado.",
@@ -150,6 +151,10 @@ class _VisualizarPerfilProfissionalViewState
                       final preco = (s["preco"] is num)
                           ? s["preco"]
                           : num.tryParse(s["preco"].toString()) ?? 0;
+                      
+                      final duracao = (s["duracao"] is num)
+                          ? s["duracao"]
+                          : num.tryParse(s["duracao"].toString()) ?? 60;
 
                       return Card(
                         color: Color(0xFFFAFAFA),
@@ -158,16 +163,41 @@ class _VisualizarPerfilProfissionalViewState
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: ListTile(
+                        // NOVO WIDGET: ExpansionTile para expandir a descrição
+                        child: ExpansionTile(
                           title: Text(
                             s["nome"],
-                            style: TextStyle(fontSize: 18),
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                           ),
-                          trailing: Text(
-                            "R\$ ${preco.toStringAsFixed(2)}",
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
+                          // Mostra preço e duração no canto direito
+                          trailing: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "R\$ ${preco.toStringAsFixed(2)}",
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                "${duracao.toInt()} min",
+                                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                              ),
+                            ],
                           ),
+                          // Conteúdo que aparece ao clicar (a descrição)
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12, top: 0),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  s["descricao"] ?? "Sem descrição.",
+                                  style: TextStyle(fontSize: 15, color: Colors.black87),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     }).toList(),

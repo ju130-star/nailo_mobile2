@@ -167,28 +167,56 @@ class ProprietariaService {
   }
 
   // ----------------------------------------------------------
-  // SERVIÇOS
-  // ----------------------------------------------------------
-  Future<List<Servico>> listarServicos() async {
-    final snapshot = await db.collection('servicos').get();
-    return snapshot.docs.map((doc) {
-      final data = doc.data();
-      return Servico(
-        id: doc.id,
-        nome: data['nome'] ?? '',
-        descricao: data['descricao'] ?? '',
-        preco: (data['preco'] ?? 0).toDouble(),
-        duracao: (data['duracao'] ?? 60).toInt(),
-      );
-    }).toList();
-  }
+// SERVIÇOS
+// ----------------------------------------------------------
+Future<void> adicionarServico(Servico servico) async {
+  // O servico.toMap() já inclui o idProprietaria
+  final docRef = db.collection('servicos').doc();
+  // Cria uma cópia do Servico com o ID gerado pelo Firestore
+  final Servico servicoComId = Servico(
+    id: docRef.id,
+    nome: servico.nome,
+    descricao: servico.descricao,
+    preco: servico.preco,
+    duracao: servico.duracao,
+    idProprietaria: servico.idProprietaria,
+  );
+  
+  await docRef.set(servicoComId.toMap());
+}
 
-  Future<void> atualizarServico(String id, String nome, double preco) async {
-    await db.collection('servicos').doc(id).update({
-      'nome': nome,
-      'preco': preco,
-    });
-  }
+// NOVO MÉTODO PARA LISTAR SERVIÇOS FILTRADOS PELA PROPRIETÁRIA
+Future<List<Servico>> listarServicosPorProprietaria(String idProprietaria) async {
+  final snapshot = await db
+      .collection('servicos')
+      .where('idProprietaria', isEqualTo: idProprietaria) // <-- FILTRO APLICADO
+      .get();
+  
+  return snapshot.docs.map((doc) {
+    final data = doc.data();
+    
+    // CORREÇÃO: Usando o construtor Servico.fromMap() (Se já foi corrigido)
+    // OU mapeando os dados manualmente (incluindo o novo campo)
+    return Servico(
+      id: doc.id,
+      nome: data['nome'] ?? '',
+      descricao: data['descricao'] ?? '',
+      preco: (data['preco'] as num?)?.toDouble() ?? 0.0,
+      duracao: (data['duracao'] as num?)?.toInt() ?? 60,
+      idProprietaria: data['idProprietaria'] ?? '', // <-- LENDO O NOVO CAMPO
+    );
+  }).toList();
+}
+
+Future<void> atualizarServico(String id, String nome, double preco, String descricao, int duracao) async {
+  // Ajustando para ter mais campos e evitar erros
+  await db.collection('servicos').doc(id).update({
+    'nome': nome,
+    'preco': preco,
+    'descricao': descricao, // Adicionei para consistência
+    'duracao': duracao,     // Adicionei para consistência
+  });
+}
 
   // ----------------------------------------------------------
   // AGENDAMENTOS

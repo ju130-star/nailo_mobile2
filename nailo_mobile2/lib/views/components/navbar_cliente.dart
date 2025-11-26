@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nailo_mobile2/views/cliente/agenda_cliente_view.dart';
 import 'package:nailo_mobile2/views/cliente/historico_cliente_view.dart';
-import 'package:nailo_mobile2/views/cliente/home_cliente_view.dart';
+import 'package:nailo_mobile2/views/cliente/home_cliente_view.dart'; // Certifique-se desta linha
 import 'package:nailo_mobile2/views/cliente/perfil_cliente_view.dart';
 
 class NavbarCliente extends StatefulWidget {
@@ -16,18 +16,26 @@ class NavbarCliente extends StatefulWidget {
 class _NavbarClienteState extends State<NavbarCliente> {
   int _paginaAtual = 0;
 
+  // Usa List<Widget> para armazenar as páginas.
   late final List<Widget> _paginas;
 
   @override
   void initState() {
     super.initState();
-    // Inicializa as páginas passando o userId para cada uma
+    // Inicializa as páginas garantindo a chamada correta do construtor:
     _paginas = [
+      // Aqui, garantimos que HomeClienteView está sendo instanciada como um Widget, não chamada como método.
       HomeClienteView(userId: widget.userId),
       AgendaClienteView(userId: widget.userId),
       HistoricoClienteView(userId: widget.userId),
       PerfilClienteView(userId: widget.userId),
     ];
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _paginaAtual = index;
+    });
   }
 
   @override
@@ -36,7 +44,7 @@ class _NavbarClienteState extends State<NavbarCliente> {
       body: _paginas[_paginaAtual],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _paginaAtual,
-        onTap: (index) => setState(() => _paginaAtual = index),
+        onTap: _onItemTapped,
         backgroundColor: const Color(0xFF48CFCB),
         selectedItemColor: Colors.white,
         unselectedItemColor: const Color(0xFF107A73),
