@@ -9,6 +9,7 @@ class Servico {
   final String descricao;   // Descrição do serviço
   final double preco;       // Preço em reais
   final int duracao;        // Duração em minutos
+  final String idProprietaria; // <-- NOVO CAMPO: ID da proprietária que criou o serviço
 
   //construtor
   Servico({
@@ -17,6 +18,7 @@ class Servico {
     required this.descricao,
     required this.preco,
     required this.duracao,
+    required this.idProprietaria, // <-- ADICIONADO AO CONSTRUTOR
   });
 
   //método para converter OBJ => JSON (toMap)
@@ -27,6 +29,7 @@ class Servico {
       "descricao": descricao,
       "preco": preco,
       "duracao": duracao,
+      "idProprietaria": idProprietaria, // <-- ADICIONADO AO toMap
     };
   }
 
@@ -38,6 +41,7 @@ class Servico {
       descricao: map["descricao"] ?? '',
       preco: (map["preco"] as num?)?.toDouble() ?? 0.0,
       duracao: map["duracao"] ?? 0,
+      idProprietaria: map["idProprietaria"] ?? '', // <-- ADICIONADO AO fromMap
     );
   }
 }
