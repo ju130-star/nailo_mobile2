@@ -42,13 +42,17 @@ class _AgendaProprietariaViewState extends State<AgendaProprietariaView> {
   }
 
   // Retorna os agendamentos de um dia específico
-  List<Agendamento> _getAgendamentosDoDia(DateTime dia) {
-    return _agendamentos.where((a) {
-      return a.data.year == dia.year &&
-             a.data.month == dia.month &&
-             a.data.day == dia.day;
-    }).toList();
-  }
+List<Agendamento> _getAgendamentosDoDia(DateTime dia) {
+  return _agendamentos.where((a) {
+    // Garante que o objeto DateTime do agendamento
+    // seja tratado como a data LOCAL antes de comparar.
+    final dataLocal = a.data.toLocal(); // <--- Aplica o .toLocal() AQUI
+    
+    return dataLocal.year == dia.year &&
+           dataLocal.month == dia.month &&
+           dataLocal.day == dia.day;
+  }).toList();
+}
   
   // Função auxiliar para obter as iniciais com segurança
   String _getIniciais(String idCliente) {
