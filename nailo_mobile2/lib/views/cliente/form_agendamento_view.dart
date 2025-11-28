@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:nailo_mobile2/models/servico.dart';
+import 'package:nailo_mobile2/services/notificacao_service.dart';
 
 // --- WIDGET PRINCIPAL ---
 
@@ -41,26 +42,17 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
   // --- LÓGICA DE DADOS (FIRESTORE) ---
 
   Future<void> _carregarServicos() async {
-    setState(() {
-      _carregandoServicos = true;
-    });
-    
-    print("DEBUG FIRESTORE: Buscando serviços para Proprietária ID: ${widget.proprietariaId}"); 
-    
+    setState(() => _carregandoServicos = true);
+
     try {
-      // 🛠️ CORREÇÃO CRÍTICA: Trocando 'servicos' por 'services'
       final snapshot = await FirebaseFirestore.instance
-          .collection('services') // AGORA USANDO 'services'
+          .collection('services')
           .where('idProprietaria', isEqualTo: widget.proprietariaId)
           .get();
-      
-      print("DEBUG FIRESTORE: Encontrados ${snapshot.docs.length} serviços."); 
 
       final List<Servico> servicos = snapshot.docs.map((doc) {
-        // Correção para não mudar o Servico.fromMap, injetando o ID no mapa de dados
         final data = doc.data();
         data['id'] = doc.id; 
-        
         return Servico.fromMap(data); 
       }).toList();
 
@@ -77,121 +69,147 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
       
     } catch (e) {
       print("ERRO FIRESTORE CRÍTICO ao carregar serviços: $e");
-      setState(() {
-        _carregandoServicos = false;
-      });
+      setState(() => _carregandoServicos = false);
     }
   }
 
-  // Função para calcular horários disponíveis (MOCK/Simulação)
-  void _calcularHorariosDisponiveis(DateTime data) {
-  if (_servicoSelecionado == null || _servicoSelecionado!.duracao <= 0) return;
+  // --- CORREÇÃO: remover horários já ocupados do Firestore ---
+  Future<void> _calcularHorariosDisponiveis(DateTime data) async {
+    if (_servicoSelecionado == null || _servicoSelecionado!.duracao <= 0) return;
   
-  setState(() {
-    _carregandoHorarios = true;
-    _horaSelecionada = null;
-  });
-
-  List<String> mockSlots = [];
-  final duracao = _servicoSelecionado!.duracao;
-
-  // Jornada de trabalho: 09:00 a 17:00
-  DateTime inicioJornada = DateTime(data.year, data.month, data.day, 9, 0);
-  DateTime fimJornada = DateTime(data.year, data.month, data.day, 17, 0);
-  DateTime slot = inicioJornada;
-
-  while (slot.add(Duration(minutes: duracao)).isBefore(fimJornada.add(const Duration(minutes: 1)))) {
-    bool isSlotInFuture = slot.isAfter(DateTime.now());
-
-    // BLOQUEAR horário de almoço: 12:00 às 13:00
-    if (slot.hour == 12) {
-      slot = slot.add(const Duration(hours: 1)); // pula para 13:00
-      continue;
-    }
-
-    if (data.day != DateTime.now().day || isSlotInFuture) {
-      mockSlots.add(DateFormat('HH:mm').format(slot));
-    }
-
-    slot = slot.add(Duration(minutes: duracao));
-  }
-  // Atualizar o estado
-  Future.delayed(const Duration(milliseconds: 300), () {
     setState(() {
-      _horariosDisponiveis = mockSlots;
+      _carregandoHorarios = true;
+      _horaSelecionada = null;
+      _horariosDisponiveis = [];
+    });
+
+    List<String> horariosGerados = [];
+
+    final duracao = _servicoSelecionado!.duracao;
+
+    DateTime inicioJornada = DateTime(data.year, data.month, data.day, 9, 0);
+    DateTime fimJornada = DateTime(data.year, data.month, data.day, 17, 0);
+    DateTime slot = inicioJornada;
+
+    while (slot.add(Duration(minutes: duracao)).isBefore(fimJornada.add(const Duration(minutes: 1)))) {
+      bool isAfterNow = slot.isAfter(DateTime.now());
+
+      // BLOQUEAR ALMOÇO 12h às 13h
+      if (slot.hour == 12) {
+        slot = slot.add(const Duration(hours: 1)); 
+        continue;
+      }
+
+      if (data.day != DateTime.now().day || isAfterNow) {
+        horariosGerados.add(DateFormat('HH:mm').format(slot));
+      }
+
+      slot = slot.add(Duration(minutes: duracao));
+    }
+
+    // 🔥 BUSCAR AGENDAMENTOS OCUPADOS
+    final snapshot = await FirebaseFirestore.instance
+        .collection('agendamentos')
+        .where('idProfissional', isEqualTo: widget.proprietariaId)
+        .get();
+
+    List<String> ocupados = [];
+
+    for (var doc in snapshot.docs) {
+      DateTime d = (doc['data'] as Timestamp).toDate();
+      if (d.year == data.year && d.month == data.month && d.day == data.day) {
+        ocupados.add(DateFormat('HH:mm').format(d));
+      }
+    }
+
+    print("HORÁRIOS OCUPADOS: $ocupados");
+
+    // Remover horários ocupados
+    horariosGerados.removeWhere((h) => ocupados.contains(h));
+
+    setState(() {
+      _horariosDisponiveis = horariosGerados;
       _carregandoHorarios = false;
     });
-  });
-}
+  }
 
   // Função para abrir o seletor de data
   Future<void> _selecionarData(BuildContext context) async {
-  final DateTime? picked = await showDatePicker(
-    context: context,
-    initialDate: _dataSelecionada ?? DateTime.now(),
-    firstDate: DateTime.now(),
-    lastDate: DateTime.now().add(const Duration(days: 90)),
-    locale: const Locale('pt', 'BR'),
-    selectableDayPredicate: (DateTime day) {
-      // BLOQUEAR DOMINGO (weekday == 7)
-      if (day.weekday == DateTime.sunday) {
-        return false; // dia não selecionável
-      }
-      return true; // todos os outros dias selecionáveis
-    },
-  );
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _dataSelecionada ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 90)),
+      locale: const Locale('pt', 'BR'),
+      selectableDayPredicate: (DateTime day) {
+        if (day.weekday == DateTime.sunday) return false;
+        return true;
+      },
+    );
 
-  if (picked != null && picked != _dataSelecionada) {
-    setState(() {
-      _dataSelecionada = picked;
-      _dataController.text = DateFormat('dd/MM/yyyy', 'pt_BR').format(picked);
-    });
-    _calcularHorariosDisponiveis(picked);
-  }
-}
-  
-  // Função que salva o agendamento no Firestore
-  void _salvarAgendamento() {
-    if (!_formKey.currentState!.validate() || _servicoSelecionado == null || _dataSelecionada == null || _horaSelecionada == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Por favor, preencha todos os campos.")),
-        );
-        return;
+    if (picked != null) {
+      setState(() {
+        _dataSelecionada = picked;
+        _dataController.text = DateFormat('dd/MM/yyyy', 'pt_BR').format(picked);
+      });
+      _calcularHorariosDisponiveis(picked);
     }
-    
+  }
+
+  // --- SALVAR AGENDAMENTO + NOTIFICAÇÃO ---
+  void _salvarAgendamento() async {
+    if (!_formKey.currentState!.validate() || 
+        _servicoSelecionado == null || 
+        _dataSelecionada == null || 
+        _horaSelecionada == null) {
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Por favor, preencha todos os campos.")),
+      );
+      return;
+    }
+
     final data = _dataSelecionada!;
     final hora = _horaSelecionada!;
     final servico = _servicoSelecionado!;
 
     final fullDateTime = DateTime(
-        data.year, data.month, data.day, 
-        int.parse(hora.split(':')[0]), 
-        int.parse(hora.split(':')[1])
+      data.year, data.month, data.day,
+      int.parse(hora.split(':')[0]),
+      int.parse(hora.split(':')[1])
     );
-    
-    // 🎯 SALVAMENTO NO FIRESTORE
-    FirebaseFirestore.instance.collection('agendamentos').add({
-      'idProfissional': widget.proprietariaId,
-      'idServico': servico.id,
-      'nomeServico': servico.nome,
-      'precoServico': servico.preco, 
-      'duracaoServico': servico.duracao, 
-      'data': fullDateTime,
-      'status': 'Pendente', 
-      // TODO: Adicionar o ID do cliente logado
-    }).then((_) {
+
+    try {
+      await FirebaseFirestore.instance.collection('agendamentos').add({
+        'idProfissional': widget.proprietariaId,
+        'idServico': servico.id,
+        'nomeServico': servico.nome,
+        'precoServico': servico.preco, 
+        'duracaoServico': servico.duracao, 
+        'data': fullDateTime,
+        'status': 'Pendente',
+      });
+
+      // 🔥 ENVIAR NOTIFICAÇÃO
+      await NotificacaoService().enviarNotificacao(
+        idUsuario: widget.proprietariaId,
+        mensagem: "Novo agendamento em ${DateFormat('dd/MM HH:mm').format(fullDateTime)}",
+      );
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Agendamento salvo com sucesso!")),
       );
+
       Navigator.pop(context);
-    }).catchError((error) {
-       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erro ao salvar agendamento: $error")),
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erro ao salvar agendamento: $e")),
       );
-    });
+    }
   }
 
-  // --- WIDGETS DE UI AUXILIARES ---
+  // --- UI AUXILIAR ---
   
   InputDecoration _inputDecoration(String label, {IconData? icon}) {
     return InputDecoration(
@@ -210,121 +228,54 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
     );
   }
 
-  // Dropdown de Serviços
-  Widget _buildServicoDropdown() {
-    if (_servicosDisponiveis.isEmpty && !_carregandoServicos) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.red.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.redAccent)
-        ),
-        child: const Text("⚠️ Nenhum serviço encontrado. Verifique a coleção 'services' no Firestore e se o ID da Profissional está correto. (veja o console para DEBUG)", 
-          style: TextStyle(color: Colors.red, fontSize: 14)
+  Widget _buildHorarioSelector() {
+    if (_carregandoHorarios) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(8),
+          child: CircularProgressIndicator(color: Color(0xFF48CFCB)),
         ),
       );
     }
-    
-    return DropdownButtonFormField<Servico>(
-      value: _servicoSelecionado,
-      decoration: _inputDecoration("Serviço"),
-      items: _servicosDisponiveis.map((servico) {
-        return DropdownMenuItem<Servico>(
-          value: servico,
-          child: Text(
-            "${servico.nome} (R\$ ${servico.preco.toStringAsFixed(2)}) - ${servico.duracao} min",
-            style: const TextStyle(color: Color(0xFF107A73)),
-          ),
-        );
-      }).toList(),
-      onChanged: (Servico? newValue) {
-        setState(() {
-          _servicoSelecionado = newValue;
-          _dataSelecionada = null;
-          _dataController.clear();
-          _horariosDisponiveis = [];
-        });
-      },
-      validator: (value) => value == null ? "Selecione um serviço" : null,
-      isExpanded: true,
-    );
-  }
-  
-  // Campo de Data
-  Widget _buildDataField() {
-    return GestureDetector(
-      onTap: () {
-        if (_servicoSelecionado == null) {
-           ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Selecione um serviço antes de escolher a data.")),
-           );
-           return;
-        }
-        _selecionarData(context);
-      },
-      child: AbsorbPointer(
-        child: TextFormField(
-          controller: _dataController,
-          decoration: _inputDecoration("Data (DD/MM/AAAA)", icon: Icons.calendar_today),
-          validator: (value) => _dataSelecionada == null ? "Selecione uma data" : null,
-        ),
-      ),
-    );
-  }
 
-  // Seleção de Horário (Chips)
-  Widget _buildHorarioSelector() {
     if (_dataSelecionada == null) {
-      return const Text("Selecione uma data para ver os horários.", style: TextStyle(fontSize: 14, color: Colors.black54));
-    }
-
-    if (_carregandoHorarios) {
-      return const Center(child: Padding(
-        padding: EdgeInsets.all(8.0),
-        child: CircularProgressIndicator(color: Color(0xFF48CFCB)),
-      ));
+      return const Text(
+        "Selecione uma data para ver os horários.",
+        style: TextStyle(fontSize: 14, color: Colors.black54),
+      );
     }
 
     if (_horariosDisponiveis.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: const Color(0xFFFAFAFA), borderRadius: BorderRadius.circular(12)),
-        child: const Text("Não há horários disponíveis para este dia/serviço.", style: TextStyle(color: Colors.redAccent, fontSize: 16)),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFAFAFA),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Text(
+          "Nenhum horário disponível para este dia.",
+          style: TextStyle(color: Colors.redAccent, fontSize: 16),
+        ),
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text("Selecione um horário:", style: TextStyle(color: Color(0xFF107A73), fontSize: 16, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8.0,
-          children: _horariosDisponiveis.map((hora) {
-            bool isSelected = _horaSelecionada == hora;
-            return ChoiceChip(
-              label: Text(hora),
-              selected: isSelected,
-              selectedColor: const Color(0xFF48CFCB).withOpacity(0.8),
-              backgroundColor: const Color(0xFFFAFAFA),
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.white : const Color(0xFF107A73),
-                fontWeight: FontWeight.bold
-              ),
-              onSelected: (bool selected) {
-                setState(() {
-                  _horaSelecionada = selected ? hora : null;
-                });
-              },
-            );
-          }).toList(),
-        ),
-      ],
+    return Wrap(
+      spacing: 8,
+      children: _horariosDisponiveis.map((h) {
+        bool sel = _horaSelecionada == h;
+        return ChoiceChip(
+          label: Text(h),
+          selected: sel,
+          selectedColor: const Color(0xFF48CFCB),
+          labelStyle: TextStyle(
+            color: sel ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.bold,
+          ),
+          onSelected: (_) => setState(() => _horaSelecionada = h),
+        );
+      }).toList(),
     );
   }
-  
-  // --- BUILD PRINCIPAL ---
 
   @override
   Widget build(BuildContext context) {
@@ -338,16 +289,17 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+
               Text(
                 "ID da Profissional: ${widget.proprietariaId}",
                 style: const TextStyle(fontSize: 14, color: Colors.black54),
               ),
               const SizedBox(height: 20),
-              
+
               const Text(
                 "Dados do Agendamento:",
                 style: TextStyle(
@@ -357,30 +309,55 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
                 ),
               ),
               const SizedBox(height: 20),
-              
-              // 1. Dropdown de Serviço
+
+              // Serviço
               _carregandoServicos
                   ? const Center(child: CircularProgressIndicator(color: Color(0xFF48CFCB)))
-                  : _buildServicoDropdown(),
-                  
-              const SizedBox(height: 16),
-              
-              // 2. Campo de Data
-              _buildDataField(),
-              
-              const SizedBox(height: 16),
+                  : DropdownButtonFormField<Servico>(
+                      value: _servicoSelecionado,
+                      decoration: _inputDecoration("Serviço"),
+                      items: _servicosDisponiveis.map((s) {
+                        return DropdownMenuItem(
+                          value: s,
+                          child: Text("${s.nome} (${s.duracao} min)"),
+                        );
+                      }).toList(),
+                      onChanged: (s) {
+                        setState(() {
+                          _servicoSelecionado = s;
+                          _dataSelecionada = null;
+                          _dataController.clear();
+                          _horariosDisponiveis = [];
+                        });
+                      },
+                    ),
 
-              // 3. Seleção de Horário
+              const SizedBox(height: 20),
+
+              // Data
+              GestureDetector(
+                onTap: () => _selecionarData(context),
+                child: AbsorbPointer(
+                  child: TextFormField(
+                    controller: _dataController,
+                    decoration: _inputDecoration("Data", icon: Icons.calendar_today),
+                    validator: (_) => _dataSelecionada == null ? "Escolha a data" : null,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Horários
               _buildHorarioSelector(),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 40),
 
-              // 4. Botão Salvar
               Center(
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF48CFCB),
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: _salvarAgendamento,
@@ -396,11 +373,5 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _dataController.dispose();
-    super.dispose();
   }
 }

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; 
+import 'package:intl/intl.dart';
 import 'package:nailo_mobile2/views/cliente/form_agendamento_view.dart';
 import 'package:nailo_mobile2/views/cliente/visualizar_perfil_profissional.dart';
 
 // MANTIDO O CÓDIGO STATEFULWIDGET
 class HomeClienteView extends StatefulWidget {
-  final String userId; 
+  final String userId;
 
   const HomeClienteView({super.key, required this.userId});
 
@@ -16,7 +16,7 @@ class HomeClienteView extends StatefulWidget {
 
 class _HomeClienteViewState extends State<HomeClienteView> {
   String _nomeCliente = "Cliente";
-  List<Map<String, dynamic>> _proximosAgendamentos = []; 
+  List<Map<String, dynamic>> _proximosAgendamentos = [];
   bool _carregandoNome = true;
 
   @override
@@ -24,7 +24,7 @@ class _HomeClienteViewState extends State<HomeClienteView> {
     super.initState();
     _carregarNomeCliente();
   }
-  
+
   String _getSaudacao() {
     final hora = DateTime.now().hour;
     if (hora >= 5 && hora < 12) {
@@ -35,7 +35,7 @@ class _HomeClienteViewState extends State<HomeClienteView> {
       return "Boa noite";
     }
   }
-  
+
   Future<void> _carregarNomeCliente() async {
     try {
       final userDoc = await FirebaseFirestore.instance
@@ -60,14 +60,17 @@ class _HomeClienteViewState extends State<HomeClienteView> {
       final now = Timestamp.fromDate(DateTime.now());
       final agendamentosSnap = await FirebaseFirestore.instance
           .collection('agendamentos')
-          .where('idCliente', isEqualTo: widget.userId) 
+          .where('idCliente', isEqualTo: widget.userId)
           .get();
-      
-      final List<Map<String, dynamic>> agendamentosBrutos = agendamentosSnap.docs.map((d) {
-        var data = d.data() as Map<String, dynamic>;
-        data['id'] = d.id;
-        return data;
-      }).toList();
+
+      final List<Map<String, dynamic>> agendamentosBrutos = agendamentosSnap
+          .docs
+          .map((d) {
+            var data = d.data() as Map<String, dynamic>;
+            data['id'] = d.id;
+            return data;
+          })
+          .toList();
 
       final agendamentosFuturos = agendamentosBrutos.where((ag) {
         final dataAgendamento = ag['data'] as Timestamp?;
@@ -79,17 +82,16 @@ class _HomeClienteViewState extends State<HomeClienteView> {
         final dataB = b['data'] as Timestamp;
         return dataA.compareTo(dataB);
       });
-      
+
       return agendamentosFuturos.take(2).toList();
-      
     } catch (e) {
       print("Erro ao carregar agendamentos (busca simplificada): $e");
       return [];
     }
   }
-  
+
   final List<Color> _cardColors = [
-    const Color(0xFFFFB6C1), 
+    const Color(0xFFFFB6C1),
     const Color(0xFFFFECB3),
   ];
 
@@ -100,7 +102,7 @@ class _HomeClienteViewState extends State<HomeClienteView> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFA7E8E4),
-      
+
       body: SingleChildScrollView(
         // Adicionando AlwaysScrollableScrollPhysics para garantir que o scroll funcione
         physics: const AlwaysScrollableScrollPhysics(),
@@ -112,7 +114,7 @@ class _HomeClienteViewState extends State<HomeClienteView> {
               height: MediaQuery.of(context).size.height * 0.45,
               width: double.infinity,
               decoration: const BoxDecoration(
-                color: Color(0xFF48CFCB), 
+                color: Color(0xFF48CFCB),
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(30),
                   bottomRight: Radius.circular(30),
@@ -127,7 +129,9 @@ class _HomeClienteViewState extends State<HomeClienteView> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          _carregandoNome ? "Carregando..." : "${_getSaudacao()}, $primeiroNome",
+                          _carregandoNome
+                              ? "Carregando..."
+                              : "${_getSaudacao()}, $primeiroNome",
                           style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -135,7 +139,11 @@ class _HomeClienteViewState extends State<HomeClienteView> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.notifications, color: Colors.white, size: 30),
+                          icon: const Icon(
+                            Icons.notifications,
+                            color: Colors.white,
+                            size: 30,
+                          ),
                           onPressed: () {},
                         ),
                       ],
@@ -162,18 +170,26 @@ class _HomeClienteViewState extends State<HomeClienteView> {
                     FutureBuilder<List<Map<String, dynamic>>>(
                       future: _carregarProximosAgendamentos(),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator(color: Colors.white));
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
+                          );
                         }
                         if (!snapshot.hasData || snapshot.data!.isEmpty) {
                           return const Text(
                             "Nenhum agendamento futuro.",
-                            style: TextStyle(color: Colors.white70, fontSize: 16),
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
                           );
                         }
-                        
+
                         final agendamentos = snapshot.data!;
-                        
+
                         return SizedBox(
                           height: 160,
                           child: ListView.builder(
@@ -230,11 +246,12 @@ class _HomeClienteViewState extends State<HomeClienteView> {
 
                       return ListView.builder(
                         // PROPRIEDADES DE LAYOUT REFORÇADAS:
-                        shrinkWrap: true, 
+                        shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: docs.length,
                         itemBuilder: (context, index) {
-                          final data = docs[index].data() as Map<String, dynamic>;
+                          final data =
+                              docs[index].data() as Map<String, dynamic>;
                           final id = docs[index].id;
 
                           return _profissionalCard(
@@ -257,18 +274,20 @@ class _HomeClienteViewState extends State<HomeClienteView> {
   }
 
   // --- WIDGETS AUXILIARES ---
-  
+
   Widget _buildAgendamentoCard(Map<String, dynamic> ag, Color cardColor) {
     // ... (Mantido o código do card de agendamento)
     final dataTimestamp = ag['data'] as Timestamp?;
     final data = dataTimestamp?.toDate();
-    final dataFormatada = data != null ? DateFormat('dd/MM').format(data) : '??/??'; 
-    final hora = data != null ? DateFormat('HH:mm').format(data) : '??:??'; 
+    final dataFormatada = data != null
+        ? DateFormat('dd/MM').format(data)
+        : '??/??';
+    final hora = data != null ? DateFormat('HH:mm').format(data) : '??:??';
     final nomeServico = ag['idServico'] ?? 'Serviço';
-    final idProfissional = ag['idProprietaria'] ?? 'Profissional'; 
+    final idProfissional = ag['idProprietaria'] ?? 'Profissional';
 
     return Container(
-      width: 250, 
+      width: 250,
       margin: const EdgeInsets.only(right: 15),
       child: Card(
         color: cardColor,
@@ -280,15 +299,43 @@ class _HomeClienteViewState extends State<HomeClienteView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(dataFormatada, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87)),
-              Text(hora, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87)),
-              const Spacer(), 
-              Text(nomeServico, style: const TextStyle(fontSize: 14, color: Colors.black87)),
+              Text(
+                dataFormatada,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: Colors.black87,
+                ),
+              ),
+              Text(
+                hora,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: Colors.black87,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                nomeServico,
+                style: const TextStyle(fontSize: 14, color: Colors.black87),
+              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Com: $idProfissional", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
-                  const Icon(Icons.person_outline, size: 24, color: Colors.black87),
+                  Text(
+                    "Com: $idProfissional",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const Icon(
+                    Icons.person_outline,
+                    size: 24,
+                    color: Colors.black87,
+                  ),
                 ],
               ),
             ],
@@ -297,7 +344,7 @@ class _HomeClienteViewState extends State<HomeClienteView> {
       ),
     );
   }
-  
+
   // Card de Profissional (Lista Vertical)
   Widget _profissionalCard(
     BuildContext context, {
@@ -337,8 +384,8 @@ class _HomeClienteViewState extends State<HomeClienteView> {
           // AÇÃO DE CLIQUE:
           onTap: () {
             // DEBUG: Verifique no console se esta mensagem aparece ao clicar
-            print('✅ CLIQUE REGISTRADO: Profissional ID $proprietariaId'); 
-            
+            print('✅ CLIQUE REGISTRADO: Profissional ID $proprietariaId');
+
             Navigator.push(
               context,
               MaterialPageRoute(
