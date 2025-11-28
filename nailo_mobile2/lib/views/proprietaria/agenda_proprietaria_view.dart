@@ -25,19 +25,46 @@ class _AgendaProprietariaViewState extends State<AgendaProprietariaView> {
   }
 
   Future<void> _loadAgendamentos() async {
-    final all = await widget.service.listarAgendamentos();
-    setState(() {
-      _agendamentos = all;
-    });
+    // Note: Se 'listarAgendamentos' retornar dados inválidos (como idCliente vazio),
+    // o erro persistirá. Idealmente, a validação deveria ocorrer na criação do Agendamento.
+    try {
+        final all = await widget.service.listarAgendamentos();
+        setState(() {
+          _agendamentos = all;
+        });
+    } catch (e) {
+        // Em caso de erro de leitura do Firestore/Service, a lista fica vazia.
+        print("Erro ao carregar agendamentos: $e");
+        setState(() {
+          _agendamentos = [];
+        });
+    }
   }
 
   // Retorna os agendamentos de um dia específico
-  List<Agendamento> _getAgendamentosDoDia(DateTime dia) {
-    return _agendamentos.where((a) {
-      return a.data.year == dia.year &&
-             a.data.month == dia.month &&
-             a.data.day == dia.day;
-    }).toList();
+List<Agendamento> _getAgendamentosDoDia(DateTime dia) {
+  return _agendamentos.where((a) {
+    // Garante que o objeto DateTime do agendamento
+    // seja tratado como a data LOCAL antes de comparar.
+    final dataLocal = a.data.toLocal(); // <--- Aplica o .toLocal() AQUI
+    
+    return dataLocal.year == dia.year &&
+           dataLocal.month == dia.month &&
+           dataLocal.day == dia.day;
+  }).toList();
+}
+  
+  // Função auxiliar para obter as iniciais com segurança
+  String _getIniciais(String idCliente) {
+    // CORREÇÃO: Verifica se a string tem pelo menos 2 caracteres antes de chamar substring.
+    if (idCliente.isNotEmpty) {
+      // Se for apenas 1 caractere, pega ele mesmo. Se for 2 ou mais, pega os 2 primeiros.
+      return idCliente.length >= 2
+          ? idCliente.substring(0, 2).toUpperCase()
+          : idCliente.toUpperCase(); 
+    }
+    // Retorna um fallback (como '??' ou 'S/N' - Sem Nome) se estiver vazia
+    return '??'; 
   }
 
   @override
@@ -53,6 +80,7 @@ class _AgendaProprietariaViewState extends State<AgendaProprietariaView> {
             height: 80,
             child: ListView(
               scrollDirection: Axis.horizontal,
+              // O map ainda funciona mesmo se _agendamentos for vazio
               children: _agendamentos.map((a) {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -60,7 +88,8 @@ class _AgendaProprietariaViewState extends State<AgendaProprietariaView> {
                     children: [
                       CircleAvatar(
                         radius: 25,
-                        child: Text(a.idCliente.substring(0, 2).toUpperCase()), // inicial do cliente
+                        // Aplica a correção aqui: usa a função _getIniciais
+                        child: Text(_getIniciais(a.idCliente)), 
                       ),
                       const SizedBox(height: 4),
                       Text(a.idCliente, style: const TextStyle(fontSize: 12)),
@@ -85,6 +114,7 @@ class _AgendaProprietariaViewState extends State<AgendaProprietariaView> {
                 _focusedDay = focusedDay;
               });
             },
+            // Note: Não há alteração aqui, pois este código estava correto.
             calendarBuilders: CalendarBuilders(
               markerBuilder: (context, day, events) {
                 final diaAgendamentos = _getAgendamentosDoDia(day);
@@ -127,7 +157,8 @@ class _AgendaProprietariaViewState extends State<AgendaProprietariaView> {
                             children: [
                               CircleAvatar(
                                 radius: 25,
-                                child: Text(agendamento.idCliente.substring(0, 2).toUpperCase()),
+                                // Aplica a correção aqui: usa a função _getIniciais
+                                child: Text(_getIniciais(agendamento.idCliente)),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
