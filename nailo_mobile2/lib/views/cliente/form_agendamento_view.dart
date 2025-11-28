@@ -85,57 +85,70 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
 
   // Função para calcular horários disponíveis (MOCK/Simulação)
   void _calcularHorariosDisponiveis(DateTime data) {
-    if (_servicoSelecionado == null || _servicoSelecionado!.duracao <= 0) return;
-    
-    setState(() {
-      _carregandoHorarios = true;
-      _horaSelecionada = null;
-    });
+  if (_servicoSelecionado == null || _servicoSelecionado!.duracao <= 0) return;
+  
+  setState(() {
+    _carregandoHorarios = true;
+    _horaSelecionada = null;
+  });
 
-    List<String> mockSlots = [];
-    final duracao = _servicoSelecionado!.duracao; // Usa a duração do seu modelo
-    
-    // Jornada de trabalho mock: 09:00 a 17:00
-    DateTime inicioJornada = DateTime(data.year, data.month, data.day, 9, 0);
-    DateTime fimJornada = DateTime(data.year, data.month, data.day, 17, 0);
-    DateTime slot = inicioJornada;
-    
-    while (slot.add(Duration(minutes: duracao)).isBefore(fimJornada.add(const Duration(minutes: 1)))) {
-        bool isSlotInFuture = slot.isAfter(DateTime.now());
-        
-        if (data.day != DateTime.now().day || isSlotInFuture) {
-           mockSlots.add(DateFormat('HH:mm').format(slot));
-        }
-        
-        slot = slot.add(Duration(minutes: duracao)); 
+  List<String> mockSlots = [];
+  final duracao = _servicoSelecionado!.duracao;
+
+  // Jornada de trabalho: 09:00 a 17:00
+  DateTime inicioJornada = DateTime(data.year, data.month, data.day, 9, 0);
+  DateTime fimJornada = DateTime(data.year, data.month, data.day, 17, 0);
+  DateTime slot = inicioJornada;
+
+  while (slot.add(Duration(minutes: duracao)).isBefore(fimJornada.add(const Duration(minutes: 1)))) {
+    bool isSlotInFuture = slot.isAfter(DateTime.now());
+
+    // BLOQUEAR horário de almoço: 12:00 às 13:00
+    if (slot.hour == 12) {
+      slot = slot.add(const Duration(hours: 1)); // pula para 13:00
+      continue;
     }
 
-    Future.delayed(const Duration(milliseconds: 500), () {
-        setState(() {
-          _horariosDisponiveis = mockSlots;
-          _carregandoHorarios = false;
-        });
-    });
+    if (data.day != DateTime.now().day || isSlotInFuture) {
+      mockSlots.add(DateFormat('HH:mm').format(slot));
+    }
+
+    slot = slot.add(Duration(minutes: duracao));
   }
+
+  Future.delayed(const Duration(milliseconds: 500), () {
+    setState(() {
+      _horariosDisponiveis = mockSlots;
+      _carregandoHorarios = false;
+    });
+  });
+}
 
   // Função para abrir o seletor de data
   Future<void> _selecionarData(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _dataSelecionada ?? DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 90)),
-      locale: const Locale('pt', 'BR'), 
-    );
+  final DateTime? picked = await showDatePicker(
+    context: context,
+    initialDate: _dataSelecionada ?? DateTime.now(),
+    firstDate: DateTime.now(),
+    lastDate: DateTime.now().add(const Duration(days: 90)),
+    locale: const Locale('pt', 'BR'),
+    selectableDayPredicate: (DateTime day) {
+      // BLOQUEAR DOMINGO (weekday == 7)
+      if (day.weekday == DateTime.sunday) {
+        return false; // dia não selecionável
+      }
+      return true; // todos os outros dias selecionáveis
+    },
+  );
 
-    if (picked != null && picked != _dataSelecionada) {
-      setState(() {
-        _dataSelecionada = picked;
-        _dataController.text = DateFormat('dd/MM/yyyy', 'pt_BR').format(picked);
-      });
-      _calcularHorariosDisponiveis(picked);
-    }
+  if (picked != null && picked != _dataSelecionada) {
+    setState(() {
+      _dataSelecionada = picked;
+      _dataController.text = DateFormat('dd/MM/yyyy', 'pt_BR').format(picked);
+    });
+    _calcularHorariosDisponiveis(picked);
   }
+}
   
   // Função que salva o agendamento no Firestore
   void _salvarAgendamento() {
