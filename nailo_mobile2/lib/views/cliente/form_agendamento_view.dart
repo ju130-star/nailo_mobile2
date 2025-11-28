@@ -115,8 +115,8 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
 
     slot = slot.add(Duration(minutes: duracao));
   }
-
-  Future.delayed(const Duration(milliseconds: 500), () {
+  // Atualizar o estado
+  Future.delayed(const Duration(milliseconds: 300), () {
     setState(() {
       _horariosDisponiveis = mockSlots;
       _carregandoHorarios = false;
@@ -176,7 +176,7 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
       'nomeServico': servico.nome,
       'precoServico': servico.preco, 
       'duracaoServico': servico.duracao, 
-      'dataHora': fullDateTime,
+      'data': fullDateTime,
       'status': 'Pendente', 
       // TODO: Adicionar o ID do cliente logado
     }).then((_) {
