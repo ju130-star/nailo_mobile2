@@ -84,9 +84,9 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
   }
 
   // Função para calcular horários disponíveis (MOCK/Simulação)
-  void _calcularHorariosDisponiveis(DateTime data) async {
+  void _calcularHorariosDisponiveis(DateTime data) {
   if (_servicoSelecionado == null || _servicoSelecionado!.duracao <= 0) return;
-
+  
   setState(() {
     _carregandoHorarios = true;
     _horaSelecionada = null;
@@ -95,27 +95,7 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
   List<String> mockSlots = [];
   final duracao = _servicoSelecionado!.duracao;
 
-  // 1️⃣ Buscar horários já ocupados no Firestore
-  final inicioDoDia = DateTime(data.year, data.month, data.day, 0, 0, 0);
-  final fimDoDia = DateTime(data.year, data.month, data.day, 23, 59, 59);
-
-  final agendamentosDia = await FirebaseFirestore.instance
-      .collection("agendamentos")
-      .where("idProprietaria", isEqualTo: widget.proprietariaId) // profissional
-      .where("data", isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDoDia))
-      .where("data", isLessThanOrEqualTo: Timestamp.fromDate(fimDoDia))
-      .get();
-
-  // Lista de horários ocupados no formato HH:mm
-  List<String> horariosOcupados = agendamentosDia.docs.map((d) {
-    final timestamp = d['data'] as Timestamp;
-    final date = timestamp.toDate();
-    return DateFormat("HH:mm").format(date);
-  }).toList();
-
-  print("⛔ HORÁRIOS OCUPADOS: $horariosOcupados");
-
-  // 2️⃣ Calcular horários disponíveis
+  // Jornada de trabalho: 09:00 a 17:00
   DateTime inicioJornada = DateTime(data.year, data.month, data.day, 9, 0);
   DateTime fimJornada = DateTime(data.year, data.month, data.day, 17, 0);
   DateTime slot = inicioJornada;
@@ -123,27 +103,18 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
   while (slot.add(Duration(minutes: duracao)).isBefore(fimJornada.add(const Duration(minutes: 1)))) {
     bool isSlotInFuture = slot.isAfter(DateTime.now());
 
-    // BLOQUEAR horário de almoço (12:00 às 13:00)
+    // BLOQUEAR horário de almoço: 12:00 às 13:00
     if (slot.hour == 12) {
-      slot = slot.add(const Duration(hours: 1));
-      continue;
-    }
-
-    String horarioFormatado = DateFormat('HH:mm').format(slot);
-
-    // ❌ SE O HORÁRIO JÁ ESTIVER OCUPADO → pula
-    if (horariosOcupados.contains(horarioFormatado)) {
-      slot = slot.add(Duration(minutes: duracao));
+      slot = slot.add(const Duration(hours: 1)); // pula para 13:00
       continue;
     }
 
     if (data.day != DateTime.now().day || isSlotInFuture) {
-      mockSlots.add(horarioFormatado);
+      mockSlots.add(DateFormat('HH:mm').format(slot));
     }
 
     slot = slot.add(Duration(minutes: duracao));
   }
-
   // Atualizar o estado
   Future.delayed(const Duration(milliseconds: 300), () {
     setState(() {
@@ -152,7 +123,6 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
     });
   });
 }
-
 
   // Função para abrir o seletor de data
   Future<void> _selecionarData(BuildContext context) async {

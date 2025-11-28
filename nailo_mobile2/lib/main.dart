@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+// ⬅️ Importação essencial para localização:
+import 'package:flutter_localizations/flutter_localizations.dart'; 
 import 'package:nailo_mobile2/firebase_options.dart';
 import 'package:nailo_mobile2/views/auth/login_view.dart';
 import 'package:nailo_mobile2/views/components/navbar_cliente.dart';
@@ -45,6 +47,20 @@ class NailoApp extends StatelessWidget {
         ),
         brightness: Brightness.light,
       ),
+
+      // 🎯 CORREÇÃO: Adiciona os delegates de localização (MaterialLocalizations)
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+
+      // 🎯 CORREÇÃO: Define os idiomas suportados (incluindo Português do Brasil)
+      supportedLocales: const [
+        Locale('en', ''), 
+        Locale('pt', 'BR'), // Suporte ao Português do Brasil
+      ],
+
       home: const AuthStream(),
     );
   }
