@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart'; 
 import '../../services/proprietaria_service.dart';
-import '../../models/agendamento.dart';
+import '../../services/agendamento_service.dart'; // <--- AJUSTE O CAMINHO!
+import '../../models/agendamento.dart'; // <--- AJUSTE O CAMINHO!
 
 class AgendaProprietariaView extends StatefulWidget {
   final ProprietariaService service;
@@ -21,19 +23,17 @@ class _AgendaProprietariaViewState extends State<AgendaProprietariaView> {
   void initState() {
     super.initState();
     _loadAgendamentos();
-    _selectedDay = _focusedDay; // Seleciona o dia atual por padrão
+    _selectedDay = _focusedDay;
   }
 
   Future<void> _loadAgendamentos() async {
-    // Note: Se 'listarAgendamentos' retornar dados inválidos (como idCliente vazio),
-    // o erro persistirá. Idealmente, a validação deveria ocorrer na criação do Agendamento.
     try {
+        // Assume que 'listarAgendamentos' busca os dados do Firestore
         final all = await widget.service.listarAgendamentos();
         setState(() {
           _agendamentos = all;
         });
     } catch (e) {
-        // Em caso de erro de leitura do Firestore/Service, a lista fica vazia.
         print("Erro ao carregar agendamentos: $e");
         setState(() {
           _agendamentos = [];
@@ -41,30 +41,105 @@ class _AgendaProprietariaViewState extends State<AgendaProprietariaView> {
     }
   }
 
-  // Retorna os agendamentos de um dia específico
-List<Agendamento> _getAgendamentosDoDia(DateTime dia) {
-  return _agendamentos.where((a) {
-    // Garante que o objeto DateTime do agendamento
-    // seja tratado como a data LOCAL antes de comparar.
-    final dataLocal = a.data.toLocal(); // <--- Aplica o .toLocal() AQUI
-    
-    return dataLocal.year == dia.year &&
-           dataLocal.month == dia.month &&
-           dataLocal.day == dia.day;
-  }).toList();
-}
+  List<Agendamento> _getAgendamentosDoDia(DateTime dia) {
+    return _agendamentos.where((a) {
+      final dataLocal = a.data.toLocal(); 
+      return dataLocal.year == dia.year &&
+             dataLocal.month == dia.month &&
+             dataLocal.day == dia.day;
+    }).toList();
+  }
   
-  // Função auxiliar para obter as iniciais com segurança
-  String _getIniciais(String idCliente) {
-    // CORREÇÃO: Verifica se a string tem pelo menos 2 caracteres antes de chamar substring.
-    if (idCliente.isNotEmpty) {
-      // Se for apenas 1 caractere, pega ele mesmo. Se for 2 ou mais, pega os 2 primeiros.
-      return idCliente.length >= 2
-          ? idCliente.substring(0, 2).toUpperCase()
-          : idCliente.toUpperCase(); 
+  String _getIniciais(String nomeCliente) {
+    if (nomeCliente.isNotEmpty) {
+      return nomeCliente.length >= 2
+          ? nomeCliente.substring(0, 2).toUpperCase()
+          : nomeCliente.toUpperCase(); 
     }
-    // Retorna um fallback (como '??' ou 'S/N' - Sem Nome) se estiver vazia
     return '??'; 
+  }
+
+  // MÉTODO COM A LÓGICA DE TOGGLE (CONCLUIR / DESFAZER CONCLUSÃO)
+  Future<void> _toggleAgendamentoStatus(String agendamentoId, String currentStatus) async {
+    try {
+      if (agendamentoId.isEmpty) return;
+      
+      // Se o status atual é 'concluido', o novo status deve ser 'agendado'.
+      // Caso contrário (se for 'agendado' ou outro), o novo status será 'concluido'.
+      final newStatus = currentStatus == 'concluido' ? 'agendado' : 'concluido';
+      final actionText = newStatus == 'concluido' ? "concluído" : "revertido para agendado";
+      
+      // Chamada que PRECISA da classe AgendamentoService
+      await AgendamentoService.atualizarStatusAgendamento(agendamentoId, newStatus);
+      
+      await _loadAgendamentos(); 
+
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("✅ Atendimento $actionText com sucesso!")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("❌ Erro ao atualizar status. Tente novamente.")),
+      );
+      await _loadAgendamentos();
+    }
+  }
+
+  // Função para exibir o diálogo de conclusão/detalhes
+  void _showConcluirDialog(BuildContext context, Agendamento agendamento) {
+    final bool isConcluido = agendamento.status == 'concluido';
+    
+    // Define o texto e a cor da ação com base no status atual
+    final String actionText = isConcluido ? "DESFAZER CONCLUSÃO" : "MARCAR COMO CONCLUÍDO";
+    final Color actionColor = isConcluido ? Colors.orange.shade800 : Colors.green.shade600;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text("Detalhes do Agendamento"),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text("Cliente: ${agendamento.nomeCliente}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text("Serviço: ${agendamento.nomeServico}"),
+                Text("Horário: ${DateFormat('dd/MM/yyyy HH:mm').format(agendamento.data.toLocal())}"), 
+                Text("Preço: R\$ ${agendamento.preco.toStringAsFixed(2)}"), 
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    const Text("Status Atual: ", style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      agendamento.status?.toUpperCase() ?? 'PENDENTE',
+                      style: TextStyle(
+                        color: isConcluido ? Colors.green : Colors.blue, 
+                        fontWeight: FontWeight.bold
+                      ),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            // Botão de Ação (Concluir ou Desfazer)
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: actionColor),
+              onPressed: () async {
+                  Navigator.of(dialogContext).pop(); 
+                  // Chama a função de toggle
+                  await _toggleAgendamentoStatus(agendamento.id!, agendamento.status!); 
+                },
+              child: Text(actionText),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text("FECHAR"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -75,12 +150,11 @@ List<Agendamento> _getAgendamentosDoDia(DateTime dia) {
       appBar: AppBar(title: const Text("Agenda da Proprietária")),
       body: Column(
         children: [
-          // --- Barra horizontal com perfis das clientes ---
+          // Barra horizontal de perfis
           SizedBox(
             height: 80,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              // O map ainda funciona mesmo se _agendamentos for vazio
               children: _agendamentos.map((a) {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -88,11 +162,10 @@ List<Agendamento> _getAgendamentosDoDia(DateTime dia) {
                     children: [
                       CircleAvatar(
                         radius: 25,
-                        // Aplica a correção aqui: usa a função _getIniciais
-                        child: Text(_getIniciais(a.idCliente)), 
+                        child: Text(_getIniciais(a.nomeCliente)), 
                       ),
                       const SizedBox(height: 4),
-                      Text(a.idCliente, style: const TextStyle(fontSize: 12)),
+                      Text(a.nomeCliente, style: const TextStyle(fontSize: 12)), 
                     ],
                   ),
                 );
@@ -102,7 +175,7 @@ List<Agendamento> _getAgendamentosDoDia(DateTime dia) {
 
           const Divider(),
 
-          // --- Calendário com lembretes ---
+          // Calendário
           TableCalendar(
             firstDay: DateTime.utc(2020, 1, 1),
             lastDay: DateTime.utc(2030, 12, 31),
@@ -114,22 +187,29 @@ List<Agendamento> _getAgendamentosDoDia(DateTime dia) {
                 _focusedDay = focusedDay;
               });
             },
-            // Note: Não há alteração aqui, pois este código estava correto.
             calendarBuilders: CalendarBuilders(
               markerBuilder: (context, day, events) {
                 final diaAgendamentos = _getAgendamentosDoDia(day);
                 if (diaAgendamentos.isNotEmpty) {
-                  return ListView(
-                    shrinkWrap: true,
-                    children: diaAgendamentos.map((a) => Container(
-                      margin: const EdgeInsets.symmetric(vertical: 1),
+                  final agendamentosNaoCancelados = diaAgendamentos.where((a) => a.status != 'cancelado').toList();
+                  
+                  if (agendamentosNaoCancelados.isEmpty) return null;
+
+                  final markerColor = agendamentosNaoCancelados.every((a) => a.status == 'concluido') 
+                      ? Colors.green 
+                      : Colors.blue;
+
+                  return Positioned(
+                    right: 1,
+                    bottom: 1,
+                    child: Container(
                       width: 6,
                       height: 6,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.blue,
+                        color: markerColor, 
                       ),
-                    )).toList(),
+                    ),
                   );
                 }
                 return null;
@@ -139,7 +219,7 @@ List<Agendamento> _getAgendamentosDoDia(DateTime dia) {
 
           const SizedBox(height: 16),
 
-          // --- Cards de atendimentos do dia selecionado ---
+          // Cards de atendimentos do dia selecionado
           Expanded(
             child: agendamentosDoDia.isEmpty
                 ? const Center(child: Text("Nenhum atendimento para este dia"))
@@ -147,35 +227,57 @@ List<Agendamento> _getAgendamentosDoDia(DateTime dia) {
                     itemCount: agendamentosDoDia.length,
                     itemBuilder: (context, index) {
                       final agendamento = agendamentosDoDia[index];
-                      final hora = "${agendamento.data.hour.toString().padLeft(2, '0')}:${agendamento.data.minute.toString().padLeft(2, '0')}";
+                      final horaFormatada = DateFormat('HH:mm').format(agendamento.data.toLocal()); 
+                      
+                      final isConcluido = agendamento.status == 'concluido';
+                      final cardColor = isConcluido ? Colors.green.shade50 : Colors.white; 
+                      final statusDisplay = agendamento.status?.toUpperCase() ?? 'PENDENTE';
 
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 25,
-                                // Aplica a correção aqui: usa a função _getIniciais
-                                child: Text(_getIniciais(agendamento.idCliente)),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      agendamento.idServico,
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(agendamento.idCliente),
-                                  ],
+                      return InkWell(
+                        onTap: () => _showConcluirDialog(context, agendamento), 
+                        
+                        child: Card(
+                          color: cardColor,
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 25,
+                                  child: Text(_getIniciais(agendamento.nomeCliente)), 
                                 ),
-                              ),
-                              Text(hora),
-                            ],
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        agendamento.nomeServico, 
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        "${agendamento.nomeCliente} (R\$${agendamento.preco.toStringAsFixed(2)})",
+                                        style: TextStyle(
+                                          decoration: isConcluido ? TextDecoration.lineThrough : null 
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        statusDisplay,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: isConcluido ? Colors.green.shade700 : Colors.blue,
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                ),
+                                Text(horaFormatada), 
+                              ],
+                            ),
                           ),
                         ),
                       );
