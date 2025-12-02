@@ -14,6 +14,14 @@ class AgendamentoController {
     return await AgendamentoService.listarAgendamentos(currentUser!.uid);
   }
 
+  // Adicionar ao seu AgendamentoController.dart
+
+  Future<List<Agendamento>> listarHistoricoConcluido() async {
+    if (currentUser == null) return [];
+    // Chama o novo método do Service, passando o ID do usuário logado
+    return await AgendamentoService.listarHistoricoConcluido(currentUser!.uid);
+  }
+
   // Criar/agendar um horário
   Future<void> criarAgendamento(Agendamento agendamento) async {
     await AgendamentoService.adicionarAgendamento(agendamento);
