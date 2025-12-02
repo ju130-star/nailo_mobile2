@@ -30,14 +30,16 @@ class _PerfilClienteViewState extends State<PerfilClienteView> {
         _carregando = false;
       });
     } catch (e) {
-      print("Erro ao carregar usuário: $e");
+      // debugPrint("Erro ao carregar usuário: $e");
       setState(() => _carregando = false);
     }
   }
 
   Future<void> _logout() async {
-    await AuthService.logoutUsuario(); // <-- chama o logout do AuthService
-    Navigator.pushReplacementNamed(context, '/login');
+    await AuthService.logoutUsuario(); 
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
   }
 
   @override
@@ -65,85 +67,109 @@ class _PerfilClienteViewState extends State<PerfilClienteView> {
   }
 
   Widget _perfilContent() {
+    // Componente auxiliar para as informações (igual ao _infoTile original, mas com Card)
+    Widget _infoCard(IconData icon, String title, String subtitle) {
+      return Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 1, // Sombra suave
+        color: Colors.white,
+        child: ListTile(
+          leading: Icon(icon, color: const Color(0xFF48CFCB)),
+          title: Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          subtitle: Text(subtitle, style: const TextStyle(fontSize: 14)),
+        ),
+      );
+    }
+    
+    // Garantir que a foto e o nome fiquem centralizados
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center, // Centraliza os itens de largura menor
         children: [
+          // FOTO / ÍCONE
           CircleAvatar(
             radius: 60,
             backgroundColor: const Color(0xFF48CFCB),
             backgroundImage:
                 _usuario!.fotoUrl != null ? NetworkImage(_usuario!.fotoUrl!) : null,
             child: _usuario!.fotoUrl == null
-                ? const Icon(Icons.person, size: 60, color: Color(0xFFFAFAFA))
+                ? const Icon(Icons.person, size: 60, color: Colors.white)
                 : null,
           ),
           const SizedBox(height: 16),
-          Text(
-            _usuario!.nome,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF107A73),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _usuario!.email,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.black54,
-            ),
-          ),
-          const SizedBox(height: 20),
-          _infoTile(Icons.phone, _usuario!.telefone),
-          const SizedBox(height: 10),
-          _infoTile(Icons.badge, "Tipo: ${_usuario!.tipo}"),
-          const SizedBox(height: 10),
-          _infoTile(Icons.verified_user,
-              _usuario!.ativo ? "Ativo ✅" : "Inativo ❌"),
-          const SizedBox(height: 30),
-          ElevatedButton.icon(
-            onPressed: _logout,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF48CFCB),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-            ),
-            icon: const Icon(Icons.logout, color: Colors.white),
-            label: const Text(
-              "Sair da Conta",
-              style: TextStyle(color: Colors.white, fontSize: 16),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _infoTile(IconData icon, String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFAFAFA),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
-        ],
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: const Color(0xFF48CFCB)),
-          const SizedBox(width: 12),
-          Expanded(
+          // NOME
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
-              text,
-              style: const TextStyle(fontSize: 16, color: Colors.black87),
+              _usuario!.nome,
+              textAlign: TextAlign.center, // Garante que o nome centralize
+              style: const TextStyle(
+                fontSize: 24, // Aumentei um pouco para destaque
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF107A73),
+              ),
             ),
           ),
+          
+          const SizedBox(height: 30),
+
+          // BLOCO DE INFORMAÇÕES DE CONTATO
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Informações de Contato",
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF107A73),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // EMAIL
+          _infoCard(
+            Icons.email, 
+            "Email", 
+            _usuario!.email
+          ),
+
+          // TELEFONE
+          _infoCard(
+            Icons.phone, 
+            "Telefone", 
+            _usuario!.telefone.isEmpty ? "Não informado" : _usuario!.telefone
+          ),
+          
+          const SizedBox(height: 30),
+
+          // BOTÃO DE LOGOUT
+          SizedBox(
+            width: double.infinity, // Aproveita a largura máxima para o botão
+            child: ElevatedButton.icon(
+              onPressed: _logout,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF48CFCB),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              ),
+              icon: const Icon(Icons.logout, color: Colors.white),
+              label: const Text(
+                "Sair da Conta",
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 40), 
         ],
       ),
     );
