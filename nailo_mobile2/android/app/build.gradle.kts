@@ -45,3 +45,8 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // 🎯 Correção da Sintaxe para Kotlin DSL
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4") // ⬅️ Use parênteses
+}
