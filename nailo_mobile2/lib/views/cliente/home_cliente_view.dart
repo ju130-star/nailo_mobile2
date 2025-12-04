@@ -276,15 +276,19 @@ class _HomeClienteViewState extends State<HomeClienteView> {
   // --- WIDGETS AUXILIARES ---
 
   Widget _buildAgendamentoCard(Map<String, dynamic> ag, Color cardColor) {
-    // ... (Mantido o código do card de agendamento)
+    
     final dataTimestamp = ag['data'] as Timestamp?;
-    final data = dataTimestamp?.toDate();
+    final data = dataTimestamp?.toDate().toLocal();
+    
     final dataFormatada = data != null
         ? DateFormat('dd/MM').format(data)
         : '??/??';
     final hora = data != null ? DateFormat('HH:mm').format(data) : '??:??';
-    final nomeServico = ag['idServico'] ?? 'Serviço';
-    final idProfissional = ag['idProprietaria'] ?? 'Profissional';
+    
+    final nomeServico = ag['nomeServico'] ?? 'Serviço Desconhecido';
+    final nomeProfissional = ag.containsKey('nomeProprietaria') 
+        ? ag['nomeProprietaria'] as String 
+        : 'Profissional Desconhecido';
 
     return Container(
       width: 250,
@@ -316,19 +320,27 @@ class _HomeClienteViewState extends State<HomeClienteView> {
                 ),
               ),
               const Spacer(),
+              
+              // 🎯 CORREÇÃO: Adicionado TextOverflow.ellipsis ao nome do serviço
               Text(
-                nomeServico,
+                nomeServico, 
                 style: const TextStyle(fontSize: 14, color: Colors.black87),
+                overflow: TextOverflow.ellipsis, // Lida com nomes de serviço longos
               ),
+              
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    "Com: $idProfissional",
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                  // 🎯 CORREÇÃO: Envolvido em Expanded para respeitar o espaço
+                  Expanded( 
+                    child: Text(
+                      "Com: $nomeProfissional", 
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                      overflow: TextOverflow.ellipsis, // Lida com nomes de profissional longos
                     ),
                   ),
                   const Icon(

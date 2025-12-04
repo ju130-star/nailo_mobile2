@@ -90,6 +90,7 @@ class SlotDiaService {
           idServico: dataMap['idServico'] ?? '',
           nomeCliente: dataMap['nomeCliente'] ?? '',
           nomeServico: dataMap['nomeServico'] ?? '',
+          nomeProprietaria: dataMap['nomeProprietaria'] ?? '',
           data: (dataMap['data'] as Timestamp?)?.toDate() ?? DateTime.now(),
           status: dataMap['status'] ?? 'agendado',
           observacao: dataMap['observacao'],
