@@ -35,21 +35,50 @@ class AgendamentoService {
   }
 }
 
-  static Future<List<Agendamento>> listarHistoricoConcluido(String uidUsuario) async {
+  // LISTA AGENDAMENTOS ESPECIFICAMENTE PARA O CLIENTE
+  static Future<List<Agendamento>> listarAgendamentosDoCliente(String idCliente) async {
     try {
       QuerySnapshot snapshot = await _agendamentos
-          .where('idUsuario', isEqualTo: uidUsuario)
-          .where('status', isEqualTo: 'concluido') // 🎯 FILTRO CRÍTICO
-          .orderBy('data', descending: true) // Ordena do mais recente para o mais antigo
+          // 🎯 CORRIGIDO: Busca pelo ID do Cliente
+          .where('idCliente', isEqualTo: idCliente) 
           .get();
 
-      return snapshot.docs.map((doc) {
-        return Agendamento.fromMap(doc.data() as Map<String, dynamic>); 
+      List<Agendamento> lista = snapshot.docs.map((doc) {
+        return Agendamento.fromMap(doc.data() as Map<String, dynamic>);
       }).toList();
+
+      return lista;
     } catch (e) {
-      print("Erro ao listar histórico concluído: $e");
+      print("Erro ao listar agendamentos do cliente: $e");
       rethrow;
     }
+  }
+
+// DENTRO DE agendamento_service.dart
+
+  static Future<List<Agendamento>> listarHistoricoConcluido(String uidUsuario) async {
+      try {
+        QuerySnapshot snapshot = await _agendamentos 
+            // 🎯 CORREÇÃO FINAL: Usar o nome do campo EXATO 'idCliente'
+            .where('idCliente', isEqualTo: uidUsuario) 
+            
+            // Confirmação: O status 'concluido' está correto
+            .where('status', isEqualTo: 'concluido') 
+            .orderBy('data', descending: true)
+            .get();
+
+        print("DEBUG: Encontrados ${snapshot.docs.length} agendamentos no histórico."); // Checar no console!
+
+        return snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id;
+          return Agendamento.fromMap(data); 
+        }).toList();
+        
+      } catch (e) {
+        print("Erro ao listar histórico concluído: $e");
+        rethrow;
+      }
   }
 
   // Buscar agendamento por ID
@@ -82,6 +111,7 @@ class AgendamentoService {
       // Note que usamos um Map aqui para atualizar APENAS o campo 'status'
       await _agendamentos.doc(idAgendamento).update({
         'status': novoStatus, 
+        'atualizadoEm': DateTime.now().toUtc(),
       });
       print("Status do agendamento $idAgendamento atualizado para '$novoStatus' com sucesso!");
     } catch (e) {
@@ -89,6 +119,20 @@ class AgendamentoService {
       rethrow;
     }
   }
+
+  static Future<void> cancelarAgendamento(String idAgendamento) async {
+    try {
+        await _agendamentos.doc(idAgendamento).update({
+            // 🎯 O status muda para 'cancelado'
+            'status': 'cancelado', 
+            'atualizadoEm': DateTime.now().toUtc(),
+        });
+        print('Agendamento $idAgendamento cancelado com sucesso.');
+    } catch (e) {
+        print("Erro ao cancelar agendamento: $e");
+        rethrow;
+    }
+}
 
   // Deletar agendamento
   static Future<void> deletarAgendamento(String id) async {

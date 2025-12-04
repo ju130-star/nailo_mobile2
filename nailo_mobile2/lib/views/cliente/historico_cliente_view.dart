@@ -24,16 +24,18 @@ class _HistoricoClienteViewState extends State<HistoricoClienteView> {
 
   Future<void> _carregarHistorico() async {
     try {
-      final agendamentos = await AgendamentoService.listarAgendamentos(widget.userId);
+      // 🎯 CORREÇÃO 1: Usar o método que filtra AGENDAMENTOS CONCLUÍDOS/PASSADOS
+      // O método listarHistoricoConcluido já está ajustado para usar 'idCliente' e 'concluido'
+      final agendamentos = await AgendamentoService.listarHistoricoConcluido(widget.userId);
 
-      // filtra somente os que já passaram ou estão concluídos/cancelados
-      final historico = agendamentos.where((ag) {
-        final agora = DateTime.now();
-        return ag.data.isBefore(agora) || ag.status != "agendado";
-      }).toList();
+      // 🛑 REMOVIDA LÓGICA DE FILTRO MANUAL: 
+      // Agora o serviço já traz os concluídos. Se você quiser todos (passados, concluídos E cancelados), 
+      // o filtro abaixo está incompleto.
+      // Manteremos apenas os que vieram do listarHistoricoConcluido, assumindo que
+      // o status "concluido" é o foco principal.
 
       setState(() {
-        _historico = historico;
+        _historico = agendamentos; // Usa a lista filtrada pelo serviço
         _carregando = false;
       });
     } catch (e) {
@@ -78,7 +80,29 @@ class _HistoricoClienteViewState extends State<HistoricoClienteView> {
   }
 
   Widget _historicoCard(Agendamento ag) {
-    final dataFormatada = DateFormat("dd/MM/yyyy 'às' HH:mm").format(ag.data);
+    // 🎯 CORREÇÃO 3: Converte para Local Time para exibir a data/hora correta
+    final dataLocal = ag.data.toLocal(); 
+    final dataFormatada = DateFormat("dd/MM/yyyy 'às' HH:mm").format(dataLocal);
+
+    // Determina o ícone e a cor com base no status (e assume concluído se a data passou)
+    IconData statusIcon;
+    Color statusColor;
+    String statusTexto = ag.status;
+    
+    // Simplifica a lógica de status
+    if (ag.status == "cancelado") {
+      statusIcon = Icons.cancel;
+      statusColor = Colors.redAccent;
+    } else if (ag.status == "concluido" || ag.data.toLocal().isBefore(DateTime.now())) {
+      statusIcon = Icons.check_circle;
+      statusColor = const Color(0xFF48CFCB);
+      if (ag.status != "cancelado") {
+        statusTexto = "Concluído";
+      }
+    } else {
+      statusIcon = Icons.schedule;
+      statusColor = Colors.orange;
+    }
 
     return Card(
       color: const Color(0xFFFAFAFA),
@@ -87,20 +111,44 @@ class _HistoricoClienteViewState extends State<HistoricoClienteView> {
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: ListTile(
         leading: Icon(
-          ag.status == "cancelado" ? Icons.cancel : Icons.check_circle,
-          color: ag.status == "cancelado" ? Colors.redAccent : const Color(0xFF48CFCB),
+          statusIcon,
+          color: statusColor,
           size: 30,
         ),
         title: Text(
-          "Serviço: ${ag.idServico}",
+          // 🎯 CORREÇÃO 2: Exibir o nome do serviço
+          "Serviço: ${ag.nomeServico}", 
           style: const TextStyle(
             color: Color(0xFF107A73),
             fontWeight: FontWeight.bold,
           ),
         ),
-        subtitle: Text(
-          "Data: $dataFormatada\nStatus: ${ag.status}",
-          style: const TextStyle(color: Colors.black54),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Profissional: ${ag.nomeProprietaria}",
+              style: const TextStyle(color: Colors.black54),
+            ),
+            Text(
+              "Data: $dataFormatada",
+              style: const TextStyle(color: Colors.black54),
+            ),
+            Text(
+              "Status: $statusTexto",
+              style: TextStyle(
+                color: statusColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        trailing: Text(
+          "R\$ ${ag.preco.toStringAsFixed(2)}",
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF107A73),
+          ),
         ),
       ),
     );

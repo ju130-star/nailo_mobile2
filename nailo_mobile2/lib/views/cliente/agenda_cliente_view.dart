@@ -24,39 +24,59 @@ class _AgendaClienteViewState extends State<AgendaClienteView> {
   @override
   void initState() {
     super.initState();
-    // Fluxo de carregamento padrão, como o modelo da proprietária
+    // 1. Inicia o carregamento de dados
     _carregarAgendamentos(); 
     _selectedDay = _focusedDay; // Seleciona o dia atual por padrão
   }
 
+  // 💡 CORREÇÃO 1: Função única de carregamento, usando o método correto do Service.
   Future<void> _carregarAgendamentos() async {
-    try {
-      // Lista agendamentos filtrados pelo idCliente (widget.userId)
-      final agendamentos = await AgendamentoService.listarAgendamentos(widget.userId);
+  try {
+    // 🎯 ISSO É CRÍTICO: Deve chamar o método de filtro do cliente!
+    final agendamentos = await AgendamentoService.listarAgendamentosDoCliente(widget.userId);
 
-      setState(() {
-        _agendamentos = agendamentos;
-        _carregando = false;
-      });
-    } catch (e) {
-      print("Erro ao carregar agendamentos: $e");
-      setState(() => _carregando = false);
-    }
+    // Linha de DEBUG FINAL
+    print("DEBUG: Carregados ${agendamentos.length} agendamentos para o ID: ${widget.userId}");
+
+    setState(() {
+      _agendamentos = agendamentos;
+      _carregando = false;
+    });
+  } catch (e) {
+    print("Erro ao carregar agendamentos: $e");
+    setState(() => _carregando = false);
   }
+}
 
-  // Retorna os agendamentos de um dia específico
+  // 💡 CORREÇÃO 2: Lógica de filtragem de data (Hora/UTC corrigida)
+  // Retorna os agendamentos de um dia específico (Filtro local)
   List<Agendamento> _getAgendamentosDoDia(DateTime dia) {
-    return _agendamentos.where((a) {
-      // Compara apenas o dia, mês e ano
-      return a.data.year == dia.year &&
-             a.data.month == dia.month &&
-             a.data.day == dia.day;
-    }).toList();
-  }
+  // 1. Normaliza o dia selecionado (ignora a hora do calendário)
+  final diaSelecionado = DateTime(dia.year, dia.month, dia.day);
+
+  return _agendamentos.where((a) {
+    // 2. Converte a data do Agendamento (que está em UTC no modelo) para o fuso horário local do usuário.
+    final dataAgendamentoLocal = a.data.toLocal();
+    
+    // 3. Normaliza a data do agendamento (ignora a hora)
+    final dataAgendamentoComparavel = DateTime(
+      dataAgendamentoLocal.year, 
+      dataAgendamentoLocal.month, 
+      dataAgendamentoLocal.day
+    );
+    
+    // 4. Compara se os componentes de data (Ano, Mês, Dia) são estritamente iguais.
+    return dataAgendamentoComparavel.year == diaSelecionado.year &&
+           dataAgendamentoComparavel.month == diaSelecionado.month &&
+           dataAgendamentoComparavel.day == diaSelecionado.day;
+
+  }).toList();
+}
+
 
   @override
   Widget build(BuildContext context) {
-    // Filtra os agendamentos do dia selecionado
+    // 💡 CORREÇÃO 3: Chama a função de FILTRO LOCAL (não a de carregamento!)
     final agendamentosDoDia = _selectedDay != null ? _getAgendamentosDoDia(_selectedDay!) : [];
 
     return Scaffold(
@@ -72,11 +92,8 @@ class _AgendaClienteViewState extends State<AgendaClienteView> {
             )
           : Column(
               children: [
-                // Não colocaremos a barra horizontal de perfis, pois na visão do cliente,
-                // ela já tem o ID dela (widget.userId) e não precisa listar todos os clientes.
-                
                 // --- Calendário com lembretes ---
-                Card( // Usando Card para dar um visual mais clean ao calendário
+                Card( 
                   margin: const EdgeInsets.all(8.0),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 3,
@@ -92,9 +109,9 @@ class _AgendaClienteViewState extends State<AgendaClienteView> {
                         _focusedDay = focusedDay;
                       });
                     },
+                    // eventLoader deve apontar para o filtro local
                     eventLoader: _getAgendamentosDoDia,
                     calendarBuilders: CalendarBuilders(
-                      // Modelando o markerBuilder para ser similar ao modelo
                       markerBuilder: (context, day, events) {
                         final diaAgendamentos = _getAgendamentosDoDia(day);
                         if (diaAgendamentos.isNotEmpty) {
@@ -139,7 +156,7 @@ class _AgendaClienteViewState extends State<AgendaClienteView> {
                 
                 const SizedBox(height: 8),
 
-                // --- Lista de Agendamentos do Dia Selecionado (Expanded para evitar Overflow) ---
+                // --- Lista de Agendamentos do Dia Selecionado ---
                 Expanded(
                   child: agendamentosDoDia.isEmpty
                       ? const Center(child: Text("Nenhum agendamento para este dia"))
@@ -157,11 +174,14 @@ class _AgendaClienteViewState extends State<AgendaClienteView> {
     );
   }
 
+  // Widget _agendamentoCard (inalterado)
   Widget _agendamentoCard(Agendamento ag) {
-     final hora = "${ag.data.hour.toString().padLeft(2, '0')}:${ag.data.minute.toString().padLeft(2, '0')}";
-     final dataFormatada = "${ag.data.day.toString().padLeft(2, '0')}/${ag.data.month.toString().padLeft(2, '0')}/${ag.data.year}";
-     
-     return Card(
+      // Usa .toLocal() para garantir que a hora exibida seja a hora local, já que a data no Firestore é UTC
+      final dataLocal = ag.data.toLocal(); 
+      final hora = "${dataLocal.hour.toString().padLeft(2, '0')}:${dataLocal.minute.toString().padLeft(2, '0')}";
+      final dataFormatada = "${dataLocal.day.toString().padLeft(2, '0')}/${dataLocal.month.toString().padLeft(2, '0')}/${dataLocal.year}";
+      
+      return Card(
         color: const Color(0xFFFAFAFA),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 3,
@@ -169,7 +189,7 @@ class _AgendaClienteViewState extends State<AgendaClienteView> {
         child: ListTile(
           leading: const Icon(Icons.schedule, color: Color(0xFF48CFCB), size: 30),
           title: Text(
-            ag.idServico,
+            ag.nomeServico, // Usando nomeServico do modelo corrigido
             style: const TextStyle(
               color: Color(0xFF107A73),
               fontWeight: FontWeight.bold,
@@ -177,7 +197,7 @@ class _AgendaClienteViewState extends State<AgendaClienteView> {
           ),
           subtitle: Text(
             // Exibe a data e a hora formatada
-            "$dataFormatada às $hora. Profissional: ${ag.idProprietaria}",
+            "$dataFormatada às $hora. Profissional: ${ag.nomeProprietaria}",
             style: const TextStyle(color: Colors.black54),
           ),
           trailing: IconButton(
@@ -188,7 +208,8 @@ class _AgendaClienteViewState extends State<AgendaClienteView> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text("Agendamento deletado com sucesso")),
               );
-              _carregarAgendamentos();
+              // Recarrega a lista para remover o item da UI
+              _carregarAgendamentos(); 
             },
           ),
         ),

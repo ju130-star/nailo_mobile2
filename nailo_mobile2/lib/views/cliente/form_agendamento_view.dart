@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:intl/date_symbol_data_local.dart';
@@ -158,6 +159,17 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
 
   // --- SALVAR AGENDAMENTO + NOTIFICAÇÃO ---
   void _salvarAgendamento() async {
+    // 1. Obter o ID do Cliente logado (O USUÁRIO QUE ESTÁ USANDO A TELA)
+    final User? clienteLogado = FirebaseAuth.instance.currentUser;
+    
+    // Verificações
+    if (clienteLogado == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Erro: Cliente não logado.")),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate() || 
         _servicoSelecionado == null || 
         _dataSelecionada == null || 
@@ -178,16 +190,46 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
       int.parse(hora.split(':')[0]),
       int.parse(hora.split(':')[1])
     );
+    final dataUtc = fullDateTime.toUtc(); 
 
     try {
+      // 🎯 PASSO 1: BUSCAR O NOME DA PROPRIETÁRIA (ID está em widget.proprietariaId)
+      final proprietariaDoc = await FirebaseFirestore.instance
+          .collection('usuarios') // Coleção CORRETA: 'usuarios'
+          .doc(widget.proprietariaId)
+          .get();
+
+      String nomeProprietaria = 'Profissional Desconhecido';
+      if (proprietariaDoc.exists && proprietariaDoc.data()!.containsKey('nome')) {
+        nomeProprietaria = proprietariaDoc.data()!['nome'];
+      }
+      
+      // 🎯 PASSO 2: BUSCAR O NOME DO CLIENTE (ID está em clienteLogado.uid)
+      final clienteDoc = await FirebaseFirestore.instance
+          .collection('usuarios') // Coleção CORRETA: 'usuarios'
+          .doc(clienteLogado.uid)
+          .get();
+          
+      String nomeCliente = 'Cliente Desconhecido';
+      if (clienteDoc.exists && clienteDoc.data()!.containsKey('nome')) {
+        nomeCliente = clienteDoc.data()!['nome'];
+      }
+
+      // 🎯 PASSO 3: SALVAR AGENDAMENTO com todos os campos necessários
       await FirebaseFirestore.instance.collection('agendamentos').add({
-        'idProfissional': widget.proprietariaId,
+        'idProprietaria': widget.proprietariaId,
+        'nomeProprietaria': nomeProprietaria, // ✅ Nome da Profissional
+        'idCliente': clienteLogado.uid,
+        'nomeCliente': nomeCliente, // ✅ Nome do Cliente
         'idServico': servico.id,
         'nomeServico': servico.nome,
-        'precoServico': servico.preco, 
-        'duracaoServico': servico.duracao, 
-        'data': fullDateTime,
-        'status': 'Pendente',
+        // É importante que o modelo Agendamento exija 'preco' e 'duracao'
+        'preco': servico.preco, 
+        'duracao': servico.duracao, 
+        'data': dataUtc, 
+        'status': 'agendado', // Mudei para 'agendado' para consistência com seu modelo
+        'criadoEm': DateTime.now().toUtc(),
+        'atualizadoEm': DateTime.now().toUtc(),
       });
 
       // 🔥 ENVIAR NOTIFICAÇÃO

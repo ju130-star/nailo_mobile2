@@ -232,6 +232,7 @@ Future<void> atualizarServico(String id, String nome, double preco, String descr
         idServico: data['idServico'] ?? '',
         nomeCliente: data['nomeCliente'] ?? '',
         nomeServico: data['nomeServico'] ?? '',
+        nomeProprietaria: data['nomeProprietaria'] ?? '',
         data: (data['data'] as Timestamp?)?.toDate() ?? DateTime.now(),
         status: data['status'] ?? 'agendado',
         observacao: data['observacao'],
