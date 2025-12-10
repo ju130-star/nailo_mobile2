@@ -1,8 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
+import 'package:nailo_mobile2/managers/lembrete_manager.dart';
 import 'package:nailo_mobile2/models/servico.dart';
 import 'package:nailo_mobile2/services/notificacao_service.dart';
 
@@ -11,10 +12,7 @@ import 'package:nailo_mobile2/services/notificacao_service.dart';
 class FormAgendamentoView extends StatefulWidget {
   final String proprietariaId;
 
-  const FormAgendamentoView({
-    super.key,
-    required this.proprietariaId,
-  });
+  const FormAgendamentoView({super.key, required this.proprietariaId});
 
   @override
   State<FormAgendamentoView> createState() => _FormAgendamentoViewState();
@@ -36,10 +34,10 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
   @override
   void initState() {
     super.initState();
-    initializeDateFormatting('pt_BR', null); 
+    initializeDateFormatting('pt_BR', null);
     _carregarServicos();
   }
-  
+
   // --- LÓGICA DE DADOS (FIRESTORE) ---
 
   Future<void> _carregarServicos() async {
@@ -53,21 +51,20 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
 
       final List<Servico> servicos = snapshot.docs.map((doc) {
         final data = doc.data();
-        data['id'] = doc.id; 
-        return Servico.fromMap(data); 
+        data['id'] = doc.id;
+        return Servico.fromMap(data);
       }).toList();
 
       setState(() {
         _servicosDisponiveis = servicos;
         _carregandoServicos = false;
         if (_servicosDisponiveis.isNotEmpty) {
-           _servicoSelecionado = _servicosDisponiveis.first;
-           if (_dataSelecionada != null) {
-             _calcularHorariosDisponiveis(_dataSelecionada!);
-           }
+          _servicoSelecionado = _servicosDisponiveis.first;
+          if (_dataSelecionada != null) {
+            _calcularHorariosDisponiveis(_dataSelecionada!);
+          }
         }
       });
-      
     } catch (e) {
       print("ERRO FIRESTORE CRÍTICO ao carregar serviços: $e");
       setState(() => _carregandoServicos = false);
@@ -76,8 +73,9 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
 
   // --- CORREÇÃO: remover horários já ocupados do Firestore ---
   Future<void> _calcularHorariosDisponiveis(DateTime data) async {
-    if (_servicoSelecionado == null || _servicoSelecionado!.duracao <= 0) return;
-  
+    if (_servicoSelecionado == null || _servicoSelecionado!.duracao <= 0)
+      return;
+
     setState(() {
       _carregandoHorarios = true;
       _horaSelecionada = null;
@@ -92,12 +90,14 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
     DateTime fimJornada = DateTime(data.year, data.month, data.day, 17, 0);
     DateTime slot = inicioJornada;
 
-    while (slot.add(Duration(minutes: duracao)).isBefore(fimJornada.add(const Duration(minutes: 1)))) {
+    while (slot
+        .add(Duration(minutes: duracao))
+        .isBefore(fimJornada.add(const Duration(minutes: 1)))) {
       bool isAfterNow = slot.isAfter(DateTime.now());
 
       // BLOQUEAR ALMOÇO 12h às 13h
       if (slot.hour == 12) {
-        slot = slot.add(const Duration(hours: 1)); 
+        slot = slot.add(const Duration(hours: 1));
         continue;
       }
 
@@ -161,7 +161,8 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
   void _salvarAgendamento() async {
     // 1. Obter o ID do Cliente logado (O USUÁRIO QUE ESTÁ USANDO A TELA)
     final User? clienteLogado = FirebaseAuth.instance.currentUser;
-    
+    final String? idCliente = clienteLogado?.uid;
+
     // Verificações
     if (clienteLogado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -170,11 +171,10 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
       return;
     }
 
-    if (!_formKey.currentState!.validate() || 
-        _servicoSelecionado == null || 
-        _dataSelecionada == null || 
+    if (!_formKey.currentState!.validate() ||
+        _servicoSelecionado == null ||
+        _dataSelecionada == null ||
         _horaSelecionada == null) {
-      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Por favor, preencha todos os campos.")),
       );
@@ -186,11 +186,13 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
     final servico = _servicoSelecionado!;
 
     final fullDateTime = DateTime(
-      data.year, data.month, data.day,
+      data.year,
+      data.month,
+      data.day,
       int.parse(hora.split(':')[0]),
-      int.parse(hora.split(':')[1])
+      int.parse(hora.split(':')[1]),
     );
-    final dataUtc = fullDateTime.toUtc(); 
+    final dataUtc = fullDateTime.toUtc();
 
     try {
       // 🎯 PASSO 1: BUSCAR O NOME DA PROPRIETÁRIA (ID está em widget.proprietariaId)
@@ -200,16 +202,17 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
           .get();
 
       String nomeProprietaria = 'Profissional Desconhecido';
-      if (proprietariaDoc.exists && proprietariaDoc.data()!.containsKey('nome')) {
+      if (proprietariaDoc.exists &&
+          proprietariaDoc.data()!.containsKey('nome')) {
         nomeProprietaria = proprietariaDoc.data()!['nome'];
       }
-      
+
       // 🎯 PASSO 2: BUSCAR O NOME DO CLIENTE (ID está em clienteLogado.uid)
       final clienteDoc = await FirebaseFirestore.instance
           .collection('usuarios') // Coleção CORRETA: 'usuarios'
           .doc(clienteLogado.uid)
           .get();
-          
+
       String nomeCliente = 'Cliente Desconhecido';
       if (clienteDoc.exists && clienteDoc.data()!.containsKey('nome')) {
         nomeCliente = clienteDoc.data()!['nome'];
@@ -224,18 +227,21 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
         'idServico': servico.id,
         'nomeServico': servico.nome,
         // É importante que o modelo Agendamento exija 'preco' e 'duracao'
-        'preco': servico.preco, 
-        'duracao': servico.duracao, 
-        'data': dataUtc, 
-        'status': 'agendado', // Mudei para 'agendado' para consistência com seu modelo
+        'preco': servico.preco,
+        'duracao': servico.duracao,
+        'data': dataUtc,
+        'status':
+            'agendado', // Mudei para 'agendado' para consistência com seu modelo
         'criadoEm': DateTime.now().toUtc(),
         'atualizadoEm': DateTime.now().toUtc(),
       });
 
       // 🔥 ENVIAR NOTIFICAÇÃO
-      await NotificacaoService().enviarNotificacao(
-        idUsuario: widget.proprietariaId,
-        mensagem: "Novo agendamento em ${DateFormat('dd/MM HH:mm').format(fullDateTime)}",
+      await LembreteManager().criarNotificacoesAgendamento(
+        idCliente: idCliente!,
+        idProprietaria: widget.proprietariaId,
+        dataHoraAgendamento:
+            fullDateTime, // Passa a data completa do agendamento
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -243,23 +249,26 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
       );
 
       Navigator.pop(context);
-
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erro ao salvar agendamento: $e")),
-      );
+      // Ajuste o print para o erro, se necessário
+      print("ERRO ao salvar agendamento: $e");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Erro ao salvar agendamento: $e")));
     }
   }
 
   // --- UI AUXILIAR ---
-  
+
   InputDecoration _inputDecoration(String label, {IconData? icon}) {
     return InputDecoration(
       labelText: label,
       filled: true,
       fillColor: const Color(0xFFFAFAFA),
       labelStyle: const TextStyle(color: Color(0xFF107A73)),
-      suffixIcon: icon != null ? Icon(icon, color: const Color(0xFF48CFCB)) : null,
+      suffixIcon: icon != null
+          ? Icon(icon, color: const Color(0xFF48CFCB))
+          : null,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFF48CFCB)),
@@ -335,7 +344,6 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               Text(
                 "ID da Profissional: ${widget.proprietariaId}",
                 style: const TextStyle(fontSize: 14, color: Colors.black54),
@@ -354,7 +362,11 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
 
               // Serviço
               _carregandoServicos
-                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF48CFCB)))
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF48CFCB),
+                      ),
+                    )
                   : DropdownButtonFormField<Servico>(
                       value: _servicoSelecionado,
                       decoration: _inputDecoration("Serviço"),
@@ -382,8 +394,12 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
                 child: AbsorbPointer(
                   child: TextFormField(
                     controller: _dataController,
-                    decoration: _inputDecoration("Data", icon: Icons.calendar_today),
-                    validator: (_) => _dataSelecionada == null ? "Escolha a data" : null,
+                    decoration: _inputDecoration(
+                      "Data",
+                      icon: Icons.calendar_today,
+                    ),
+                    validator: (_) =>
+                        _dataSelecionada == null ? "Escolha a data" : null,
                   ),
                 ),
               ),
@@ -399,8 +415,13 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF48CFCB),
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 40,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: _salvarAgendamento,
                   icon: const Icon(Icons.check, color: Colors.white),

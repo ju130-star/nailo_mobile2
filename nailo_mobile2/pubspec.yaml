@@ -17,6 +17,7 @@ dependencies:
   table_calendar: ^3.2.0
   flutter_localizations: 
     sdk: flutter
+  badges: ^3.1.2
 
 dev_dependencies:
   flutter_test:

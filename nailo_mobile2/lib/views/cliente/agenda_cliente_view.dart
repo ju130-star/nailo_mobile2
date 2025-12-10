@@ -241,7 +241,7 @@ class _AgendaClienteViewState extends State<AgendaClienteView> {
     return Scaffold(
       backgroundColor: const Color(0xFFA7E8E4),
       appBar: AppBar(
-        title: const Text("Minha Agenda 💅"),
+        title: const Text("Minha Agenda"),
         centerTitle: true,
         backgroundColor: const Color(0xFF48CFCB),
       ),
