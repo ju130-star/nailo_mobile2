@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+// 1. 🎯 NOVO IMPORT NECESSÁRIO
+import 'package:firebase_auth/firebase_auth.dart'; 
+
 import 'package:nailo_mobile2/services/proprietaria_service.dart';
 import 'package:nailo_mobile2/views/proprietaria/agenda_proprietaria_view.dart';
 import 'package:nailo_mobile2/views/proprietaria/controle_financeiro_view.dart';
@@ -17,6 +20,11 @@ class _NavbarProprietariaState extends State<NavbarProprietaria> {
 
   // Um único service para todas as telas
   final ProprietariaService _service = ProprietariaService();
+
+  // 2. 🎯 Obter o ID do usuário Logado
+  // Assume que o usuário está logado neste ponto, caso contrário, 
+  // esta página não deveria ser acessível.
+  final String _proprietariaId = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   void initState() {
@@ -62,17 +70,20 @@ class _NavbarProprietariaState extends State<NavbarProprietaria> {
     );
   }
 
-  // Páginas separadas, cada uma recebendo o mesmo service
+  // Páginas separadas, cada uma recebendo o service e o ID, quando necessário
     Widget _getPagina(int index) {
     switch (index) {
       case 0:
         return HomeProprietariaView();
       case 1:
+        // Aqui, se o AgendaProprietariaView precisar do ID, você deve passar:
+        // AgendaProprietariaView(service: _service, proprietariaId: _proprietariaId);
         return AgendaProprietariaView(service: _service);
       case 2:
-        return ControleFinanceiroView(service: _service);
+        // 3. 🎯 CORREÇÃO: Passando o ID real do usuário logado
+        return ControleFinanceiroView(service: _service, proprietariaId: _proprietariaId);
       case 3:
-        return const PerfilProprietariaView(); // <- só instanciar direto
+        return const PerfilProprietariaView(); 
       default:
         return const SizedBox();
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nailo_mobile2/services/auth_service.dart';
 import 'package:nailo_mobile2/services/usuario_service.dart';
 import 'package:nailo_mobile2/models/user.dart';
+import 'package:nailo_mobile2/views/auth/login_view.dart';
 import 'package:nailo_mobile2/views/cliente/editar_perfil_cliente_view.dart'; 
 
 class PerfilClienteView extends StatefulWidget {
@@ -50,8 +51,13 @@ class _PerfilClienteViewState extends State<PerfilClienteView> {
 
   Future<void> _logout() async {
     await AuthService.logoutUsuario(); 
+    
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login'); 
+      // ✅ NAVEGAÇÃO CORRIGIDA: Usa rota direta e limpa a pilha
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginView()), 
+        (Route<dynamic> route) => false, 
+      );
     }
   }
 

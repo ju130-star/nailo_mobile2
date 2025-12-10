@@ -238,11 +238,12 @@ class _FormAgendamentoViewState extends State<FormAgendamentoView> {
 
       // 🔥 ENVIAR NOTIFICAÇÃO
       await LembreteManager().criarNotificacoesAgendamento(
-        idCliente: idCliente!,
-        idProprietaria: widget.proprietariaId,
-        dataHoraAgendamento:
-            fullDateTime, // Passa a data completa do agendamento
-      );
+      idCliente: idCliente!,
+      nomeCliente: nomeCliente, // ✅ CORREÇÃO AQUI: Passando o nome do cliente
+      idProprietaria: widget.proprietariaId,
+      dataHoraAgendamento:
+          fullDateTime, // Passa a data completa do agendamento
+    );
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Agendamento salvo com sucesso!")),

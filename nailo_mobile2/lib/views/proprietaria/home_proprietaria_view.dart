@@ -22,6 +22,20 @@ class _HomeProprietariaViewState extends State<HomeProprietariaView> {
   List<SlotDia> slots = [];
   bool loading = true;
 
+  // 🚀 CORREÇÃO 2: Mapeamento dos nomes para exibição com acentos
+  String _obterNomeDiaExibicao(String diaSemAcento) {
+    final Map<String, String> mapeamento = {
+      'segunda': 'Segunda',
+      'terca': 'Terça',
+      'quarta': 'Quarta',
+      'quinta': 'Quinta',
+      'sexta': 'Sexta',
+      'sabado': 'Sábado',
+      'domingo': 'Domingo',
+    };
+    return mapeamento[diaSemAcento.toLowerCase()] ?? diaSemAcento;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -68,6 +82,7 @@ class _HomeProprietariaViewState extends State<HomeProprietariaView> {
   Future<void> carregarSlots() async {
     if (horarioSelecionado == null) return;
     setState(() => loading = true);
+    // Aqui assumimos que o SlotDiaService já está corrigido para a lógica de duração
     slots = await slotService.gerarSlotsDoDia(horarioSelecionado!);
     setState(() => loading = false);
   }
@@ -77,7 +92,7 @@ class _HomeProprietariaViewState extends State<HomeProprietariaView> {
     return Scaffold(
       backgroundColor: const Color(0xFFA7E8E4), // fundo principal
       appBar: AppBar(
-        title: const Text("Painel da Proprietária 💅"),
+        title: const Text("Painel da Proprietária"),
         backgroundColor: const Color(0xFF48CFCB),
         foregroundColor: const Color(0xFF107A73),
         centerTitle: true,
@@ -144,7 +159,8 @@ class _HomeProprietariaViewState extends State<HomeProprietariaView> {
               ),
               child: Center(
                 child: Text(
-                  h.diaSemana.toUpperCase(),
+                  // 🚀 CORREÇÃO 2 APLICADA
+                  _obterNomeDiaExibicao(h.diaSemana).toUpperCase(),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -216,10 +232,14 @@ class _HomeProprietariaViewState extends State<HomeProprietariaView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Agendado para: ${slot.agendamento!.idCliente}",
+                            // 🚀 CORREÇÃO 1 APLICADA
+                            "Agendado para: ${slot.agendamento!.nomeCliente}",
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          Text("Serviço: ${slot.agendamento!.idServico}"),
+                          Text(
+                            // 🚀 CORREÇÃO 1 APLICADA
+                            "Serviço: ${slot.agendamento!.nomeServico}",
+                          ),
                         ],
                       ),
               ),

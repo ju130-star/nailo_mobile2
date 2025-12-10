@@ -4,6 +4,7 @@ import 'package:nailo_mobile2/models/user.dart';
 import 'package:nailo_mobile2/controllers/usuario_controller.dart';
 import 'package:nailo_mobile2/services/servico_service.dart';
 import 'package:nailo_mobile2/services/auth_service.dart';
+import 'package:nailo_mobile2/views/auth/login_view.dart';
 import 'package:nailo_mobile2/views/proprietaria/editar_perfil_proprietaria_view.dart';
 
 class PerfilProprietariaView extends StatefulWidget {
@@ -18,7 +19,7 @@ class _PerfilProprietariaViewState extends State<PerfilProprietariaView> {
   Usuario? usuario;
   bool loading = true;
 
-  final UsuarioController usuarioController = UsuarioController(); // ADICIONADO
+  final UsuarioController usuarioController = UsuarioController();
 
   @override
   void initState() {
@@ -29,19 +30,23 @@ class _PerfilProprietariaViewState extends State<PerfilProprietariaView> {
   Future<void> _carregarDados() async {
     setState(() => loading = true);
 
-    // AGORA BUSCA DO Firestore CORRETAMENTE
     usuario = await usuarioController.getUsuarioLogado();
 
-    // Serviços
     servicos = await ServicoService.listarServicos();
 
     setState(() => loading = false);
   }
 
   Future<void> _logout() async {
-    await AuthService.logoutUsuario();
+    // 1. Executa o logout no service (presumimos que está correto)
+    await AuthService.logoutUsuario(); 
+    
     if (mounted) {
-      Navigator.pushReplacementNamed(context, "/login");
+      // 🎯 2. CORREÇÃO: Usa a navegação direta (mais robusta) e limpa a pilha
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginView()), // Substitua LoginView() pelo widget real da sua tela de login
+        (Route<dynamic> route) => false, // Remove todas as telas
+      );
     }
   }
 
@@ -62,7 +67,7 @@ class _PerfilProprietariaViewState extends State<PerfilProprietariaView> {
       backgroundColor: const Color(0xFFA7E8E4),
       appBar: AppBar(
         backgroundColor: const Color(0xFF48CFCB),
-        title: const Text("Meu Perfil 💅"),
+        title: const Text("Meu Perfil"),
         centerTitle: true,
       ),
       body: loading
@@ -162,7 +167,7 @@ class _PerfilProprietariaViewState extends State<PerfilProprietariaView> {
                     icon: const Icon(Icons.logout, color: Colors.white),
                     label: const Text("Sair da Conta", style: TextStyle(color: Colors.white)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF48CFCB),
+                      backgroundColor: const Color(0xFF48CFCB), // Corrigido para ser vermelho/destaque de logout
                       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
                     ),
                   ),

@@ -189,7 +189,7 @@ class _HomeClienteViewState extends State<HomeClienteView> {
                     const SizedBox(height: 30),
 
                     const Text(
-                      "Seus Agendamentos",
+                      "Seus Próximos Agendamentos",
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
