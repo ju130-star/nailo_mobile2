@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nailo_mobile2/services/auth_service.dart';
 import 'package:nailo_mobile2/services/usuario_service.dart';
 import 'package:nailo_mobile2/models/user.dart';
+import 'package:nailo_mobile2/views/cliente/editar_perfil_cliente_view.dart'; 
 
 class PerfilClienteView extends StatefulWidget {
   final String userId;
@@ -35,30 +36,44 @@ class _PerfilClienteViewState extends State<PerfilClienteView> {
     }
   }
 
+  void _navegarParaEdicao() async {
+    final bool? atualizado = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const EditarPerfilClienteView()),
+    );
+
+    // Se o pop retornar 'true' (indicando sucesso na atualização), recarregar a tela
+    if (atualizado == true) {
+      _carregarUsuario(); 
+    }
+  }
+
   Future<void> _logout() async {
     await AuthService.logoutUsuario(); 
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
+      Navigator.pushReplacementNamed(context, '/login'); 
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryColor = Color(0xFF48CFCB); // Cor principal
+    
     return Scaffold(
       backgroundColor: const Color(0xFFA7E8E4),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF48CFCB),
-        title: const Text("Meu Perfil 💅"),
+        backgroundColor: primaryColor,
+        title: const Text("Meu Perfil"),
         centerTitle: true,
       ),
       body: _carregando
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF48CFCB)),
+              child: CircularProgressIndicator(color: primaryColor),
             )
           : _usuario == null
               ? const Center(
                   child: Text(
-                    "Erro ao carregar perfil 😢",
+                    "Erro ao carregar perfil",
                     style: TextStyle(color: Color(0xFF107A73)),
                   ),
                 )
@@ -69,13 +84,15 @@ class _PerfilClienteViewState extends State<PerfilClienteView> {
   Widget _perfilContent() {
     // Componente auxiliar para as informações (igual ao _infoTile original, mas com Card)
     Widget _infoCard(IconData icon, String title, String subtitle) {
+      const Color primaryColor = Color(0xFF48CFCB); // Cor principal
+      
       return Card(
         margin: const EdgeInsets.only(bottom: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 1, // Sombra suave
         color: Colors.white,
         child: ListTile(
-          leading: Icon(icon, color: const Color(0xFF48CFCB)),
+          leading: Icon(icon, color: primaryColor),
           title: Text(
             title,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -117,14 +134,41 @@ class _PerfilClienteViewState extends State<PerfilClienteView> {
             ),
           ),
           
+          const SizedBox(height: 20),
+
+          // NOVO BOTÃO DE EDITAR PERFIL (ElevatedButton)
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon( // Usando ElevatedButton
+              onPressed: _navegarParaEdicao,
+              icon: const Icon(Icons.edit, color: Colors.white), // Ícone Branco
+              label: const Text(
+                "Editar Perfil", 
+                style: TextStyle(
+                  color: Colors.white, // Texto Branco
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold
+                )
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF48CFCB), // Cor principal
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                elevation: 2, // Adiciona uma pequena sombra
+              ),
+            ),
+          ),
+
           const SizedBox(height: 30),
 
           // BLOCO DE INFORMAÇÕES DE CONTATO
-          Align(
+          const Align(
             alignment: Alignment.centerLeft,
             child: Text(
               "Informações de Contato",
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF107A73),

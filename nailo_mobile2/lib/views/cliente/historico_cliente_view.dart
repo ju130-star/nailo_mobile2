@@ -49,7 +49,7 @@ class _HistoricoClienteViewState extends State<HistoricoClienteView> {
     return Scaffold(
       backgroundColor: const Color(0xFFA7E8E4),
       appBar: AppBar(
-        title: const Text("Histórico de Agendamentos 💅"),
+        title: const Text("Histórico de Agendamentos"),
         centerTitle: true,
         backgroundColor: const Color(0xFF48CFCB),
       ),
@@ -60,7 +60,7 @@ class _HistoricoClienteViewState extends State<HistoricoClienteView> {
           : _historico.isEmpty
               ? const Center(
                   child: Text(
-                    "Você ainda não possui histórico de agendamentos 💅",
+                    "Você ainda não possui histórico de agendamentos",
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Color(0xFF107A73),

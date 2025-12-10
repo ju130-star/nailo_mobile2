@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:nailo_mobile2/views/cliente/form_agendamento_view.dart';
+import 'package:nailo_mobile2/views/cliente/notificacoes_cliente_view.dart';
 import 'package:nailo_mobile2/views/cliente/visualizar_perfil_profissional.dart';
+// 🔔 IMPORT NECESSÁRIO PARA A NAVEGAÇÃO DO ÍCONE
 
 // MANTIDO O CÓDIGO STATEFULWIDGET
 class HomeClienteView extends StatefulWidget {
@@ -53,9 +55,9 @@ class _HomeClienteViewState extends State<HomeClienteView> {
       });
     }
   }
-
+  
+  // 🚀 FUNÇÃO APERFEIÇOADA PARA INCLUIR O NOME DO PROFISSIONAL
   Future<List<Map<String, dynamic>>> _carregarProximosAgendamentos() async {
-    // Mantendo a busca simplificada para evitar o erro de índice
     try {
       final now = Timestamp.fromDate(DateTime.now());
       final agendamentosSnap = await FirebaseFirestore.instance
@@ -83,9 +85,29 @@ class _HomeClienteViewState extends State<HomeClienteView> {
         return dataA.compareTo(dataB);
       });
 
-      return agendamentosFuturos.take(2).toList();
+      // Buscar nome do profissional para os agendamentos futuros
+      final List<Map<String, dynamic>> agendamentosComNome = [];
+      for (var ag in agendamentosFuturos.take(2)) {
+        final proprietariaId = ag['idProprietaria'];
+        String nomeProfissional = 'Profissional Desconhecida';
+        
+        if (proprietariaId != null) {
+          final profDoc = await FirebaseFirestore.instance
+              .collection('usuarios')
+              .doc(proprietariaId)
+              .get();
+          if (profDoc.exists) {
+            nomeProfissional = profDoc.data()?['nome'] ?? 'Profissional Desconhecida';
+          }
+        }
+        // Adiciona o nome do profissional ao mapa do agendamento
+        agendamentosComNome.add({...ag, 'nomeProprietaria': nomeProfissional});
+      }
+
+      return agendamentosComNome;
+
     } catch (e) {
-      print("Erro ao carregar agendamentos (busca simplificada): $e");
+      print("Erro ao carregar agendamentos: $e");
       return [];
     }
   }
@@ -138,13 +160,22 @@ class _HomeClienteViewState extends State<HomeClienteView> {
                             color: Colors.white,
                           ),
                         ),
+                        
+                        // ✅ BOTÃO DE NOTIFICAÇÃO COM NAVEGAÇÃO SIMPLES
                         IconButton(
                           icon: const Icon(
                             Icons.notifications,
                             color: Colors.white,
                             size: 30,
                           ),
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const NotificacoesClienteView(),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -286,9 +317,10 @@ class _HomeClienteViewState extends State<HomeClienteView> {
     final hora = data != null ? DateFormat('HH:mm').format(data) : '??:??';
     
     final nomeServico = ag['nomeServico'] ?? 'Serviço Desconhecido';
+    // 🎯 Utiliza o campo 'nomeProprietaria' adicionado no _carregarProximosAgendamentos
     final nomeProfissional = ag.containsKey('nomeProprietaria') 
         ? ag['nomeProprietaria'] as String 
-        : 'Profissional Desconhecido';
+        : 'Profissional Desconhecida';
 
     return Container(
       width: 250,
@@ -321,7 +353,7 @@ class _HomeClienteViewState extends State<HomeClienteView> {
               ),
               const Spacer(),
               
-              // 🎯 CORREÇÃO: Adicionado TextOverflow.ellipsis ao nome do serviço
+              // CORREÇÃO: Adicionado TextOverflow.ellipsis ao nome do serviço
               Text(
                 nomeServico, 
                 style: const TextStyle(fontSize: 14, color: Colors.black87),
@@ -331,7 +363,7 @@ class _HomeClienteViewState extends State<HomeClienteView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // 🎯 CORREÇÃO: Envolvido em Expanded para respeitar o espaço
+                  // CORREÇÃO: Envolvido em Expanded para respeitar o espaço
                   Expanded( 
                     child: Text(
                       "Com: $nomeProfissional", 
@@ -395,7 +427,6 @@ class _HomeClienteViewState extends State<HomeClienteView> {
           ),
           // AÇÃO DE CLIQUE:
           onTap: () {
-            // DEBUG: Verifique no console se esta mensagem aparece ao clicar
             print('✅ CLIQUE REGISTRADO: Profissional ID $proprietariaId');
 
             Navigator.push(

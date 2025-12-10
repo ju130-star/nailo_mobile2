@@ -10,6 +10,7 @@ class NotificacaoService {
   Future<void> enviarNotificacao({
     required String idUsuario,
     required String mensagem,
+    required DateTime dataAgendada, // ⬅️ NOVO PARÂMETRO OBRIGATÓRIO
   }) async {
     final id = _db.collection("notificacoes").doc().id;
 
@@ -17,7 +18,7 @@ class NotificacaoService {
       id: id,
       idUsuario: idUsuario,
       mensagem: mensagem,
-      dataEnvio: DateTime.now(),
+      dataEnvio: dataAgendada, // ⬅️ AGORA USA A DATA CALCULADA
       lida: false,
     );
 
@@ -58,22 +59,24 @@ class NotificacaoService {
         .orderBy("dataEnvio", descending: true)
         .snapshots()
         .map((query) {
-      return query.docs.map((doc) {
-        return Notificacao.fromMap(doc.data());
-      }).toList();
-    });
+          return query.docs.map((doc) {
+            return Notificacao.fromMap(doc.data());
+          }).toList();
+        });
   }
 
   // ============================================================
   // 5. BUSCAR NOTIFICAÇÕES NÃO LIDAS (contar)
   // ============================================================
-  Stream<int> streamNotificacoesNaoLidas(String idUsuario) {
+  Stream<int> streamContadorNaoLidas(String idUsuario) {
     return _db
         .collection("notificacoes")
         .where("idUsuario", isEqualTo: idUsuario)
         .where("lida", isEqualTo: false)
+        // ✅ CORREÇÃO: Passando o objeto DateTime, e não uma String
+        .where("dataEnvio", isLessThanOrEqualTo: DateTime.now())
         .snapshots()
-        .map((snap) => snap.size);
+        .map((query) => query.docs.length);
   }
 
   // ============================================================
